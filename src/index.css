@@ -136,3 +136,208 @@ body {
     font-size: 13px;
   }
 }
+
+/* Markdown样式 */
+.markdown-content {
+  line-height: 1.6;
+}
+
+.markdown-content h1,
+.markdown-content h2,
+.markdown-content h3,
+.markdown-content h4,
+.markdown-content h5,
+.markdown-content h6 {
+  margin-top: 1.25em;
+  margin-bottom: 0.5em;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.markdown-content h1 {
+  font-size: 1.5em;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 0.3em;
+}
+
+.markdown-content h2 {
+  font-size: 1.25em;
+}
+
+.markdown-content h3 {
+  font-size: 1.125em;
+}
+
+.markdown-content p {
+  margin-bottom: 1em;
+}
+
+.markdown-content ul,
+.markdown-content ol {
+  margin-bottom: 1em;
+  padding-left: 1.5em;
+}
+
+.markdown-content li {
+  margin-bottom: 0.25em;
+}
+
+.markdown-content blockquote {
+  border-left: 4px solid #6366f1;
+  margin: 1em 0;
+  padding-left: 1em;
+  color: #64748b;
+  font-style: italic;
+}
+
+.markdown-content a {
+  color: #6366f1;
+  text-decoration: underline;
+  text-decoration-color: #a5b4fc;
+  transition: color 0.2s ease;
+}
+
+.markdown-content a:hover {
+  color: #4338ca;
+  text-decoration-color: #6366f1;
+}
+
+.markdown-content table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1em 0;
+  font-size: 0.875em;
+}
+
+.markdown-content th,
+.markdown-content td {
+  border: 1px solid #e2e8f0;
+  padding: 0.5em;
+  text-align: left;
+}
+
+.markdown-content th {
+  background-color: #f8fafc;
+  font-weight: 600;
+}
+
+.markdown-content hr {
+  border: none;
+  border-top: 1px solid #e2e8f0;
+  margin: 2em 0;
+}
+
+/* 代码样式 */
+.markdown-content code {
+  background-color: #f1f5f9;
+  color: #e11d48;
+  padding: 0.125em 0.25em;
+  border-radius: 0.25rem;
+  font-size: 0.875em;
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Source Code Pro', monospace;
+}
+
+.markdown-content pre {
+  background-color: #0f172a;
+  color: #e2e8f0;
+  padding: 1em;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+  margin: 1em 0;
+  font-size: 0.875em;
+  line-height: 1.5;
+}
+
+.markdown-content pre code {
+  background: none;
+  color: inherit;
+  padding: 0;
+  font-size: inherit;
+}
+
+/* 代码高亮主题 */
+.hljs {
+  background: #0f172a !important;
+  color: #e2e8f0 !important;
+}
+
+.hljs-comment,
+.hljs-quote {
+  color: #64748b;
+  font-style: italic;
+}
+
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-subst {
+  color: #f472b6;
+  font-weight: bold;
+}
+
+.hljs-number,
+.hljs-literal,
+.hljs-variable,
+.hljs-template-variable,
+.hljs-tag .hljs-attr {
+  color: #fbbf24;
+}
+
+.hljs-string,
+.hljs-doctag {
+  color: #34d399;
+}
+
+.hljs-title,
+.hljs-section,
+.hljs-selector-id {
+  color: #60a5fa;
+  font-weight: bold;
+}
+
+.hljs-type,
+.hljs-class .hljs-title {
+  color: #a78bfa;
+  font-weight: bold;
+}
+
+.hljs-tag,
+.hljs-name,
+.hljs-attribute {
+  color: #f87171;
+  font-weight: normal;
+}
+
+.hljs-regexp,
+.hljs-link {
+  color: #34d399;
+}
+
+.hljs-symbol,
+.hljs-bullet {
+  color: #60a5fa;
+}
+
+.hljs-built_in,
+.hljs-builtin-name {
+  color: #fbbf24;
+}
+
+.hljs-meta {
+  color: #64748b;
+}
+
+.hljs-deletion {
+  background: #fecaca;
+}
+
+.hljs-addition {
+  background: #bbf7d0;
+}
+
+.hljs-emphasis {
+  font-style: italic;
+}
+
+.hljs-strong {
+  font-weight: bold;
+}
