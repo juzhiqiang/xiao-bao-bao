@@ -1,12 +1,10 @@
 import XiaoBaoBaoChat from './components/XiaoBaoBaoChat';
 import './index.css';
 
-function App() {
+export default function App() {
   return (
     <div className="App">
       <XiaoBaoBaoChat />
     </div>
   );
 }
-
-export default App;
