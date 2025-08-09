@@ -1,9 +1,9 @@
 import { ApolloClient, InMemoryCache, createHttpLink } from '@apollo/client';
 import { setContext } from '@apollo/client/link/context';
 
-// GraphQL API 端点
+// GraphQL API 端点 - 更新为标准的GraphQL接口
 const httpLink = createHttpLink({
-  uri: 'https://deepseek.jzq1020814597.workers.dev/graphql',
+  uri: 'https://deepseek.jzq1020814597.workers.dev',
 });
 
 // 设置请求头
@@ -12,6 +12,7 @@ const authLink = setContext((_, { headers }) => {
     headers: {
       ...headers,
       'Content-Type': 'application/json',
+      'Accept': 'application/json',
     }
   }
 });
@@ -25,6 +26,9 @@ export const apolloClient = new ApolloClient({
       errorPolicy: 'all',
     },
     query: {
+      errorPolicy: 'all',
+    },
+    mutate: {
       errorPolicy: 'all',
     },
   },
