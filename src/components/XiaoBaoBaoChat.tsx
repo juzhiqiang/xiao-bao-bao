@@ -1,5 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { Send, User, Bot, Sparkles, Copy, RefreshCw, AlertCircle } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import rehypeHighlight from 'rehype-highlight';
 
 interface Message {
   id: string;
@@ -21,7 +24,7 @@ const XiaoBaoBaoChat = () => {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      content: '你好！我是小包包 🎯\n\n我现在接入了真实的 DeepSeek AI，可以为你提供：\n• 智能问答和深度对话\n• 代码编写和调试\n• 文案创作和润色\n• 学习指导和解答\n• 创意思维和头脑风暴\n\n让我们开始真正的AI对话吧！',
+      content: '你好！我是小包包 🎯\n\n我现在接入了真实的 **DeepSeek AI**，支持 Markdown 格式回复，可以为你提供：\n\n• **智能问答** - 回答各种问题和深度对话\n• **代码编程** - 生成、解释和调试代码\n• **创意写作** - 文案、诗歌、故事创作\n• **学习指导** - 概念解释和学习建议\n• **技术支持** - 编程技术和最佳实践\n\n支持的格式包括：\n- 代码高亮 `console.log(\"Hello World\")`\n- **粗体** 和 *斜体* 文字\n- 列表和表格\n- 链接和引用\n\n让我们开始真正的AI对话吧！✨',
       sender: 'ai',
       timestamp: new Date()
     }
@@ -33,10 +36,10 @@ const XiaoBaoBaoChat = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const quickActions: QuickAction[] = [
-    { id: '1', text: '帮我写一个React组件', icon: '💻' },
-    { id: '2', text: '推荐一本技术书籍', icon: '📚' },
-    { id: '3', text: '解释什么是机器学习', icon: '🤖' },
-    { id: '4', text: '写一首关于编程的诗', icon: '🎨' },
+    { id: '1', text: '写一个Python快速排序算法', icon: '🐍' },
+    { id: '2', text: '解释什么是React Hooks', icon: '⚛️' },
+    { id: '3', text: '创建一个Markdown表格示例', icon: '📊' },
+    { id: '4', text: '用代码实现斐波那契数列', icon: '🔢' },
   ];
 
   const scrollToBottom = () => {
@@ -132,7 +135,7 @@ const XiaoBaoBaoChat = () => {
       // 添加错误消息
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
-        content: `抱歉，我遇到了一些技术问题：${error instanceof Error ? error.message : 'API调用失败'}\n\n请稍后重试，或者检查网络连接。`,
+        content: `抱歉，我遇到了一些技术问题：**${error instanceof Error ? error.message : 'API调用失败'}**\n\n请稍后重试，或者检查网络连接。如果问题持续存在，可能是API服务暂时不可用。`,
         sender: 'ai',
         timestamp: new Date()
       };
@@ -196,6 +199,39 @@ const XiaoBaoBaoChat = () => {
     }
   };
 
+  // Markdown 自定义组件
+  const MarkdownComponents = {
+    code({ node, inline, className, children, ...props }: any) {
+      const match = /language-(\w+)/.exec(className || '');
+      return !inline && match ? (
+        <pre className="hljs">
+          <code className={className} {...props}>
+            {children}
+          </code>
+        </pre>
+      ) : (
+        <code className={className} {...props}>
+          {children}
+        </code>
+      );
+    },
+    pre({ children, ...props }: any) {
+      return <pre {...props}>{children}</pre>;
+    },
+    a({ href, children, ...props }: any) {
+      return (
+        <a 
+          href={href} 
+          target="_blank" 
+          rel="noopener noreferrer" 
+          {...props}
+        >
+          {children}
+        </a>
+      );
+    }
+  };
+
   return (
     <div className="flex flex-col h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50">
       {/* Header */}
@@ -212,7 +248,7 @@ const XiaoBaoBaoChat = () => {
               小包包
             </h1>
             <p className="text-sm text-slate-500 font-medium">
-              {isLoading ? '正在思考中...' : '基于 DeepSeek AI · 在线'}
+              {isLoading ? '正在思考中...' : 'DeepSeek AI + Markdown · 在线'}
             </p>
           </div>
         </div>
@@ -271,11 +307,23 @@ const XiaoBaoBaoChat = () => {
                     : 'bg-white border border-slate-200/80 text-slate-800 rounded-bl-lg hover:shadow-lg'
                 }`}
               >
-                <div className="prose prose-sm max-w-none">
-                  <p className="text-sm leading-relaxed whitespace-pre-wrap m-0">
-                    {message.content}
-                  </p>
+                <div className="markdown-content">
+                  {message.sender === 'user' ? (
+                    <p className="text-sm leading-relaxed whitespace-pre-wrap m-0">
+                      {message.content}
+                    </p>
+                  ) : (
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      rehypePlugins={[rehypeHighlight]}
+                      components={MarkdownComponents}
+                      className="text-sm leading-relaxed"
+                    >
+                      {message.content}
+                    </ReactMarkdown>
+                  )}
                 </div>
+                
                 <div
                   className={`text-xs mt-3 ${
                     message.sender === 'user'
@@ -327,7 +375,7 @@ const XiaoBaoBaoChat = () => {
                   <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
                   <div className="w-2 h-2 bg-pink-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
                 </div>
-                <span className="text-sm text-slate-500 ml-2">小包包正在调用 DeepSeek AI...</span>
+                <span className="text-sm text-slate-500 ml-2">小包包正在生成 Markdown 回复...</span>
               </div>
             </div>
           </div>
@@ -385,7 +433,7 @@ const XiaoBaoBaoChat = () => {
           
           <div className="flex items-center justify-center mt-3">
             <p className="text-xs text-slate-400 text-center">
-              基于 DeepSeek AI 提供智能回复 · API: deepseek.jzq1020814597.workers.dev
+              支持 Markdown 格式 · 基于 DeepSeek AI · API: deepseek.jzq1020814597.workers.dev
             </p>
           </div>
         </div>
