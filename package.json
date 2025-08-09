@@ -20,14 +20,18 @@
     "component",
     "douyin",
     "豆包",
-    "小包包"
+    "小包包",
+    "markdown"
   ],
   "author": "juzhiqiang",
   "license": "MIT",
   "dependencies": {
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "lucide-react": "^0.263.1"
+    "lucide-react": "^0.263.1",
+    "react-markdown": "^9.0.1",
+    "remark-gfm": "^4.0.0",
+    "rehype-highlight": "^7.0.0"
   },
   "devDependencies": {
     "@types/react": "^18.2.15",
