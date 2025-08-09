@@ -2,26 +2,53 @@ import { useState } from 'react';
 import { ApolloProvider } from '@apollo/client';
 import XiaoBaoBaoChat from './components/XiaoBaoBaoChat';
 import GraphQLTest from './components/GraphQLTest';
+import SimpleGraphQLTest from './components/SimpleGraphQLTest';
 import apolloClient from './lib/apollo';
 import './index.css';
 
 export default function App() {
-  const [showTest, setShowTest] = useState(false);
+  const [viewMode, setViewMode] = useState<'chat' | 'debug' | 'simple'>('chat');
 
   return (
     <ApolloProvider client={apolloClient}>
       <div className="App">
         {/* Debug Toggle */}
-        <div className="fixed top-4 right-4 z-50">
+        <div className="fixed top-4 right-4 z-50 flex gap-2">
           <button
-            onClick={() => setShowTest(!showTest)}
-            className="px-3 py-1 bg-gray-800 text-white text-sm rounded hover:bg-gray-700"
+            onClick={() => setViewMode('chat')}
+            className={`px-3 py-1 text-sm rounded ${
+              viewMode === 'chat' 
+                ? 'bg-blue-600 text-white' 
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            }`}
           >
-            {showTest ? '返回聊天' : '调试模式'}
+            聊天
+          </button>
+          <button
+            onClick={() => setViewMode('simple')}
+            className={`px-3 py-1 text-sm rounded ${
+              viewMode === 'simple' 
+                ? 'bg-green-600 text-white' 
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            }`}
+          >
+            简单测试
+          </button>
+          <button
+            onClick={() => setViewMode('debug')}
+            className={`px-3 py-1 text-sm rounded ${
+              viewMode === 'debug' 
+                ? 'bg-red-600 text-white' 
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            }`}
+          >
+            详细调试
           </button>
         </div>
         
-        {showTest ? <GraphQLTest /> : <XiaoBaoBaoChat />}
+        {viewMode === 'chat' && <XiaoBaoBaoChat />}
+        {viewMode === 'simple' && <SimpleGraphQLTest />}
+        {viewMode === 'debug' && <GraphQLTest />}
       </div>
     </ApolloProvider>
   );
