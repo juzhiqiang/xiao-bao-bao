@@ -53,6 +53,7 @@ export const GET_MODELS = gql`
   }
 `;
 
+// 修正的 Chat Mutation - 确保字段名称匹配后端schema
 export const CHAT_MUTATION = gql`
   mutation Chat($input: ChatInput!) {
     chat(input: $input) {
@@ -111,4 +112,17 @@ export interface CompletionInput {
   max_tokens?: number;
   temperature?: number;
   top_p?: number;
+}
+
+// GraphQL错误处理类型
+export interface GraphQLErrorResponse {
+  errors?: Array<{
+    message: string;
+    locations?: Array<{
+      line: number;
+      column: number;
+    }>;
+    path?: string[];
+  }>;
+  data?: any;
 }
