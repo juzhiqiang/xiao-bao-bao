@@ -64,12 +64,29 @@ const XiaoBaoBaoChat = () => {
   // 使用GraphQL调用DeepSeek API
   const callDeepSeekGraphQL = async (userMessage: string, conversationHistory: Message[]) => {
     try {
-      // 构建消息历史（只取最近10条消息以控制token消耗）
-      const recentMessages = conversationHistory.slice(-9); // 最近9条 + 当前1条 = 10条
-      const apiMessages: GraphQLChatMessage[] = recentMessages.map(msg => ({
-        role: msg.sender === 'user' ? 'user' : 'assistant',
-        content: msg.content
-      }));
+      // 构建消息历史（只取最近8条消息以控制token消耗）
+      const recentMessages = conversationHistory.slice(-7); // 最近7条 + 当前1条 = 8条
+      
+      // 转换消息格式，确保字段正确
+      const apiMessages: GraphQLChatMessage[] = [];
+      
+      // 添加历史消息
+      recentMessages.forEach(msg => {
+        if (msg.sender === 'ai') {
+          // 跳过初始欢迎消息，避免混淆
+          if (msg.id !== '1') {
+            apiMessages.push({
+              role: 'assistant',
+              content: msg.content
+            });
+          }
+        } else {
+          apiMessages.push({
+            role: 'user',
+            content: msg.content
+          });
+        }
+      });
 
       // 添加当前用户消息
       apiMessages.push({
@@ -77,56 +94,53 @@ const XiaoBaoBaoChat = () => {
         content: userMessage
       });
 
-      // 准备GraphQL输入
+      // 确保消息数组格式正确
+      const cleanMessages = apiMessages.map(msg => ({
+        role: msg.role,
+        content: msg.content
+      }));
+
+      // 准备GraphQL输入，确保字段名正确
       const input: ChatInput = {
         model: 'deepseek-chat',
-        messages: apiMessages,
+        messages: cleanMessages,
         max_tokens: 2000,
         temperature: 0.7,
         top_p: 0.9
       };
 
-      console.log('发送GraphQL请求:', input);
+      console.log('发送GraphQL请求:');
+      console.log('Input object:', JSON.stringify(input, null, 2));
+      console.log('Messages array:', cleanMessages);
 
       const result = await chatMutation({
-        variables: { input }
+        variables: { 
+          input: input
+        }
       });
 
-      console.log('GraphQL完整响应:', result);
+      console.log('GraphQL完整响应:');
+      console.log('Result:', JSON.stringify(result, null, 2));
 
-      // 更灵活的响应解析
-      let content = '';
-      
-      if (result.data) {
-        // 尝试多种可能的响应结构
-        const chatData = result.data.chat || result.data;
-        
-        if (chatData?.choices?.[0]?.message?.content) {
-          content = chatData.choices[0].message.content;
-        } else if (chatData?.message?.content) {
-          content = chatData.message.content;
-        } else if (typeof chatData === 'string') {
-          content = chatData;
-        } else {
-          console.warn('未知的响应格式:', chatData);
-          throw new Error('响应格式不匹配');
-        }
-      }
-
-      if (!content) {
-        throw new Error('未收到有效的AI响应');
-      }
-
-      return content;
-    } catch (error) {
-      console.error('DeepSeek GraphQL Error:', error);
-      
-      // 提供更详细的错误信息
-      if (error instanceof Error) {
-        throw new Error(`GraphQL错误: ${error.message}`);
+      // 解析响应
+      if (result.data?.chat?.choices?.[0]?.message?.content) {
+        const content = result.data.chat.choices[0].message.content;
+        console.log('提取的内容:', content);
+        return content;
       } else {
-        throw new Error('未知的GraphQL错误');
+        console.error('响应格式不正确:', result.data);
+        throw new Error('响应格式不匹配: 未找到choices[0].message.content');
       }
+    } catch (error) {
+      console.error('DeepSeek GraphQL详细错误:', error);
+      
+      // 输出详细错误信息
+      if (error instanceof Error) {
+        console.error('错误消息:', error.message);
+        console.error('错误堆栈:', error.stack);
+      }
+      
+      throw error;
     }
   };
 
@@ -159,14 +173,27 @@ const XiaoBaoBaoChat = () => {
     } catch (error) {
       console.error('GraphQL API Error:', error);
       
+      // 更详细的错误处理
+      let errorMessage = 'GraphQL API调用失败';
+      
+      if (error instanceof Error) {
+        if (error.message.includes('Cannot read properties of undefined')) {
+          errorMessage = '请求参数格式错误 - 可能是messages字段未正确传递';
+        } else if (error.message.includes('Network error')) {
+          errorMessage = '网络连接错误 - 请检查网络连接';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
       // 添加错误消息
-      const errorMessage: Message = {
+      const errorMsg: Message = {
         id: (Date.now() + 1).toString(),
-        content: `抱歉，我遇到了一些技术问题：**${error instanceof Error ? error.message : 'GraphQL API调用失败'}**\n\n可能的原因：\n1. GraphQL服务暂时不可用\n2. 网络连接问题\n3. API响应格式变更\n\n请稍后重试，或点击右上角的"调试模式"查看详细信息。`,
+        content: `抱歉，我遇到了一些技术问题：**${errorMessage}**\n\n**调试信息：**\n- 错误类型: ${error instanceof Error ? error.constructor.name : typeof error}\n- 错误详情: ${error instanceof Error ? error.message : String(error)}\n\n请稍后重试，或点击右上角的"调试模式"查看详细信息。`,
         sender: 'ai',
         timestamp: new Date()
       };
-      setMessages(prev => [...prev, errorMessage]);
+      setMessages(prev => [...prev, errorMsg]);
     }
   };
 
