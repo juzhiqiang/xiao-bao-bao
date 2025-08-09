@@ -5,10 +5,11 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
 import { 
-  CHAT_COMPLETION, 
+  CHAT_MUTATION, 
   GET_MODELS,
+  HELLO_QUERY,
   type ChatMessage as GraphQLChatMessage,
-  type ChatCompletionInput,
+  type ChatInput,
   type ChatResponse 
 } from '../lib/graphql';
 
@@ -39,14 +40,15 @@ const XiaoBaoBaoChat = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // GraphQL Hooks
-  const { data: modelsData, loading: modelsLoading } = useQuery(GET_MODELS);
-  const [chatCompletion, { loading: chatLoading, error: chatError }] = useMutation<
-    { chatCompletion: ChatResponse },
-    { input: ChatCompletionInput }
-  >(CHAT_COMPLETION);
+  const { data: modelsData, loading: modelsLoading, error: modelsError } = useQuery(GET_MODELS);
+  const { data: helloData } = useQuery(HELLO_QUERY);
+  const [chatMutation, { loading: chatLoading, error: chatError }] = useMutation<
+    { chat: ChatResponse },
+    { input: ChatInput }
+  >(CHAT_MUTATION);
 
   const isLoading = chatLoading;
-  const error = chatError?.message || null;
+  const error = chatError?.message || modelsError?.message || null;
 
   const quickActions: QuickAction[] = [
     { id: '1', text: '写一个Python快速排序算法', icon: '🐍' },
@@ -80,21 +82,24 @@ const XiaoBaoBaoChat = () => {
       });
 
       // 准备GraphQL输入
-      const input: ChatCompletionInput = {
+      const input: ChatInput = {
         model: 'deepseek-chat',
         messages: apiMessages,
-        maxTokens: 2000,
+        max_tokens: 2000,
         temperature: 0.7,
-        topP: 0.9,
-        stream: false
+        top_p: 0.9
       };
 
-      const { data } = await chatCompletion({
+      console.log('发送GraphQL请求:', input);
+
+      const { data } = await chatMutation({
         variables: { input }
       });
 
-      if (data?.chatCompletion?.choices?.[0]?.message?.content) {
-        return data.chatCompletion.choices[0].message.content;
+      console.log('GraphQL响应:', data);
+
+      if (data?.chat?.choices?.[0]?.message?.content) {
+        return data.chat.choices[0].message.content;
       } else {
         throw new Error('Invalid GraphQL response format');
       }
@@ -136,7 +141,7 @@ const XiaoBaoBaoChat = () => {
       // 添加错误消息
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
-        content: `抱歉，我遇到了一些技术问题：**${error instanceof Error ? error.message : 'GraphQL API调用失败'}**\n\n请稍后重试，或者检查网络连接。如果问题持续存在，可能是API服务暂时不可用。`,
+        content: `抱歉，我遇到了一些技术问题：**${error instanceof Error ? error.message : 'GraphQL API调用失败'}**\n\n请稍后重试，或者检查网络连接。如果问题持续存在，可能是API服务暂时不可用。\n\n**调试信息:**\n- GraphQL端点: https://deepseek.jzq1020814597.workers.dev\n- 错误详情: ${error instanceof Error ? error.stack : 'Unknown error'}`,
         sender: 'ai',
         timestamp: new Date()
       };
@@ -226,7 +231,8 @@ const XiaoBaoBaoChat = () => {
   };
 
   // 获取当前可用的模型
-  const availableModel = modelsData?.models?.data?.[0]?.id || 'deepseek-chat';
+  const availableModel = modelsData?.models?.[0]?.id || 'deepseek-chat';
+  const connectionStatus = helloData?.hello || '连接中...';
 
   return (
     <div className="flex flex-col h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50">
@@ -237,7 +243,9 @@ const XiaoBaoBaoChat = () => {
             <div className="w-11 h-11 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-2xl flex items-center justify-center shadow-lg">
               <Sparkles className="w-6 h-6 text-white" />
             </div>
-            <div className="absolute -top-1 -right-1 w-5 h-5 bg-green-400 rounded-full border-2 border-white shadow-sm animate-pulse"></div>
+            <div className={`absolute -top-1 -right-1 w-5 h-5 rounded-full border-2 border-white shadow-sm ${
+              error ? 'bg-red-400' : modelsLoading ? 'bg-yellow-400' : 'bg-green-400 animate-pulse'
+            }`}></div>
           </div>
           <div>
             <h1 className="text-xl font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
@@ -245,8 +253,9 @@ const XiaoBaoBaoChat = () => {
             </h1>
             <p className="text-sm text-slate-500 font-medium">
               {isLoading ? '正在思考中...' : 
-               modelsLoading ? '加载模型中...' : 
-               `GraphQL API + ${availableModel} · 在线`}
+               modelsLoading ? '连接GraphQL中...' : 
+               error ? 'GraphQL连接失败' :
+               `GraphQL API + ${availableModel} · ${connectionStatus}`}
             </p>
           </div>
         </div>
@@ -263,9 +272,23 @@ const XiaoBaoBaoChat = () => {
           <button 
             onClick={() => window.location.reload()}
             className="text-red-400 hover:text-red-600 transition-colors"
+            title="重新连接"
           >
             <RefreshCw className="w-4 h-4" />
           </button>
+        </div>
+      )}
+
+      {/* GraphQL Status */}
+      {!error && (
+        <div className="mx-6 mt-4 p-3 bg-blue-50 border border-blue-200 rounded-2xl">
+          <div className="flex items-center gap-2 text-sm text-blue-800">
+            <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
+            <span>GraphQL状态: {connectionStatus}</span>
+            {modelsData && (
+              <span className="ml-4">可用模型: {modelsData.models?.length || 0}个</span>
+            )}
+          </div>
         </div>
       )}
 
@@ -413,13 +436,13 @@ const XiaoBaoBaoChat = () => {
               placeholder="向小包包提问任何问题..."
               className="flex-1 resize-none border-0 outline-none text-slate-800 placeholder-slate-400 bg-transparent min-h-[24px] max-h-[120px] leading-6"
               rows={1}
-              disabled={isLoading}
+              disabled={isLoading || !!error}
             />
             <button
               onClick={() => handleSendMessage()}
-              disabled={!inputValue.trim() || isLoading}
+              disabled={!inputValue.trim() || isLoading || !!error}
               className={`flex-shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-200 ${
-                inputValue.trim() && !isLoading
+                inputValue.trim() && !isLoading && !error
                   ? 'bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 hover:from-indigo-600 hover:via-purple-600 hover:to-pink-600 text-white shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95'
                   : 'bg-slate-100 text-slate-400 cursor-not-allowed'
               }`}
