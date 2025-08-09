@@ -131,7 +131,7 @@ const XiaoBaoBaoChat: React.FC = () => {
               </div>
             </div>
           </div>
-        ));
+        ))}
 
         {/* Loading indicator */}
         {isLoading && (
