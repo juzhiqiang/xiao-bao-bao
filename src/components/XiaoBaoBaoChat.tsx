@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, User, Bot, Sparkles, Copy, RefreshCw } from 'lucide-react';
+import { Send, User, Bot, Sparkles, Copy, RefreshCw, AlertCircle } from 'lucide-react';
 
 interface Message {
   id: string;
@@ -14,11 +14,14 @@ interface QuickAction {
   icon: string;
 }
 
+// DeepSeek API 配置
+const API_BASE_URL = 'https://deepseek.jzq1020814597.workers.dev';
+
 const XiaoBaoBaoChat = () => {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      content: '你好！我是小包包 🎯\n\n我是你的智能AI助手，可以帮助你：\n• 回答各种问题\n• 协助创作和写作\n• 提供学习建议\n• 解决日常困扰\n\n有什么我可以帮助你的吗？',
+      content: '你好！我是小包包 🎯\n\n我现在接入了真实的 DeepSeek AI，可以为你提供：\n• 智能问答和深度对话\n• 代码编写和调试\n• 文案创作和润色\n• 学习指导和解答\n• 创意思维和头脑风暴\n\n让我们开始真正的AI对话吧！',
       sender: 'ai',
       timestamp: new Date()
     }
@@ -26,13 +29,14 @@ const XiaoBaoBaoChat = () => {
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [hoveredMessageId, setHoveredMessageId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const quickActions: QuickAction[] = [
-    { id: '1', text: '帮我写一段代码', icon: '💻' },
-    { id: '2', text: '推荐一本书', icon: '📚' },
-    { id: '3', text: '解释一个概念', icon: '💡' },
-    { id: '4', text: '翻译一段文字', icon: '🌐' },
+    { id: '1', text: '帮我写一个React组件', icon: '💻' },
+    { id: '2', text: '推荐一本技术书籍', icon: '📚' },
+    { id: '3', text: '解释什么是机器学习', icon: '🤖' },
+    { id: '4', text: '写一首关于编程的诗', icon: '🎨' },
   ];
 
   const scrollToBottom = () => {
@@ -43,9 +47,60 @@ const XiaoBaoBaoChat = () => {
     scrollToBottom();
   }, [messages]);
 
-  const handleSendMessage = (content?: string) => {
+  // 调用DeepSeek API
+  const callDeepSeekAPI = async (userMessage: string, conversationHistory: Message[]) => {
+    try {
+      // 构建消息历史（只取最近10条消息以控制token消耗）
+      const recentMessages = conversationHistory.slice(-9); // 最近9条 + 当前1条 = 10条
+      const apiMessages = recentMessages.map(msg => ({
+        role: msg.sender === 'user' ? 'user' : 'assistant',
+        content: msg.content
+      }));
+
+      // 添加当前用户消息
+      apiMessages.push({
+        role: 'user',
+        content: userMessage
+      });
+
+      const response = await fetch(`${API_BASE_URL}/api/chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'deepseek-chat',
+          messages: apiMessages,
+          max_tokens: 2000,
+          temperature: 0.7,
+          top_p: 0.9
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(errorData.error || `HTTP ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      if (data.choices && data.choices[0] && data.choices[0].message) {
+        return data.choices[0].message.content;
+      } else {
+        throw new Error('Invalid API response format');
+      }
+    } catch (error) {
+      console.error('DeepSeek API Error:', error);
+      throw error;
+    }
+  };
+
+  const handleSendMessage = async (content?: string) => {
     const messageContent = content || inputValue;
-    if (!messageContent.trim()) return;
+    if (!messageContent.trim() || isLoading) return;
+
+    // 清除之前的错误
+    setError(null);
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -58,25 +113,33 @@ const XiaoBaoBaoChat = () => {
     setInputValue('');
     setIsLoading(true);
 
-    // 模拟AI回复
-    setTimeout(() => {
-      const responses = [
-        `关于"${messageContent}"，这是一个很好的问题！\n\n让我来为你详细解答：\n\n这个话题涉及多个方面，我可以从不同角度为你分析。你想了解哪个具体方面呢？`,
-        `我理解你提到的"${messageContent}"。\n\n🤔 这确实是个有趣的话题！\n\n根据我的理解，我可以为你提供几个建议：\n1. 首先考虑具体需求\n2. 然后分析可行性\n3. 最后制定行动计划\n\n你觉得哪个方面最重要？`,
-        `关于"${messageContent}"，我来帮你分析一下：\n\n✨ 这个问题的关键在于理解核心概念\n🎯 然后找到最适合的解决方案\n💪 最后付诸实践\n\n有什么具体的疑问我可以进一步解答的吗？`
-      ];
-
-      const randomResponse = responses[Math.floor(Math.random() * responses.length)];
+    try {
+      // 调用真实的DeepSeek API
+      const aiContent = await callDeepSeekAPI(messageContent, messages);
       
       const aiResponse: Message = {
         id: (Date.now() + 1).toString(),
-        content: randomResponse,
+        content: aiContent,
         sender: 'ai',
         timestamp: new Date()
       };
+      
       setMessages(prev => [...prev, aiResponse]);
+    } catch (error) {
+      console.error('API Error:', error);
+      setError(error instanceof Error ? error.message : 'API调用失败');
+      
+      // 添加错误消息
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        content: `抱歉，我遇到了一些技术问题：${error instanceof Error ? error.message : 'API调用失败'}\n\n请稍后重试，或者检查网络连接。`,
+        sender: 'ai',
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
       setIsLoading(false);
-    }, 1500 + Math.random() * 2000);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -91,19 +154,46 @@ const XiaoBaoBaoChat = () => {
   };
 
   const copyMessage = (content: string) => {
-    navigator.clipboard.writeText(content);
+    navigator.clipboard.writeText(content).then(() => {
+      // 可以添加toast通知
+    }).catch(() => {
+      // 降级方案
+      const textArea = document.createElement('textarea');
+      textArea.value = content;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+    });
   };
 
-  const regenerateResponse = (messageId: string) => {
+  const regenerateResponse = async (messageId: string) => {
+    const messageIndex = messages.findIndex(msg => msg.id === messageId);
+    if (messageIndex === -1) return;
+    
+    // 找到该AI消息对应的用户消息
+    const userMessage = messages[messageIndex - 1];
+    if (!userMessage || userMessage.sender !== 'user') return;
+
     setIsLoading(true);
-    setTimeout(() => {
+    setError(null);
+
+    try {
+      // 获取该消息之前的对话历史
+      const conversationHistory = messages.slice(0, messageIndex - 1);
+      const aiContent = await callDeepSeekAPI(userMessage.content, conversationHistory);
+      
       setMessages(prev => prev.map(msg => 
         msg.id === messageId 
-          ? { ...msg, content: '这是重新生成的回复内容，会根据上下文提供不同的答案。' }
+          ? { ...msg, content: aiContent, timestamp: new Date() }
           : msg
       ));
+    } catch (error) {
+      console.error('Regenerate Error:', error);
+      setError(error instanceof Error ? error.message : '重新生成失败');
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   return (
@@ -121,10 +211,30 @@ const XiaoBaoBaoChat = () => {
             <h1 className="text-xl font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
               小包包
             </h1>
-            <p className="text-sm text-slate-500 font-medium">智能AI助手 · 在线</p>
+            <p className="text-sm text-slate-500 font-medium">
+              {isLoading ? '正在思考中...' : '基于 DeepSeek AI · 在线'}
+            </p>
           </div>
         </div>
       </div>
+
+      {/* Error Alert */}
+      {error && (
+        <div className="mx-6 mt-4 p-4 bg-red-50 border border-red-200 rounded-2xl flex items-center gap-3">
+          <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+          <div className="flex-1">
+            <p className="text-sm text-red-800 font-medium">连接错误</p>
+            <p className="text-sm text-red-600">{error}</p>
+          </div>
+          <button 
+            onClick={() => setError(null)}
+            className="text-red-400 hover:text-red-600 transition-colors"
+          >
+            <span className="sr-only">关闭</span>
+            ×
+          </button>
+        </div>
+      )}
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-6 space-y-6">
@@ -161,9 +271,11 @@ const XiaoBaoBaoChat = () => {
                     : 'bg-white border border-slate-200/80 text-slate-800 rounded-bl-lg hover:shadow-lg'
                 }`}
               >
-                <p className="text-sm leading-relaxed whitespace-pre-wrap m-0">
-                  {message.content}
-                </p>
+                <div className="prose prose-sm max-w-none">
+                  <p className="text-sm leading-relaxed whitespace-pre-wrap m-0">
+                    {message.content}
+                  </p>
+                </div>
                 <div
                   className={`text-xs mt-3 ${
                     message.sender === 'user'
@@ -192,8 +304,9 @@ const XiaoBaoBaoChat = () => {
                     onClick={() => regenerateResponse(message.id)}
                     className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
                     title="重新生成"
+                    disabled={isLoading}
                   >
-                    <RefreshCw className="w-4 h-4 text-slate-400" />
+                    <RefreshCw className={`w-4 h-4 text-slate-400 ${isLoading ? 'animate-spin' : ''}`} />
                   </button>
                 </div>
               )}
@@ -214,7 +327,7 @@ const XiaoBaoBaoChat = () => {
                   <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
                   <div className="w-2 h-2 bg-pink-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
                 </div>
-                <span className="text-sm text-slate-500 ml-2">小包包正在思考...</span>
+                <span className="text-sm text-slate-500 ml-2">小包包正在调用 DeepSeek AI...</span>
               </div>
             </div>
           </div>
@@ -232,6 +345,7 @@ const XiaoBaoBaoChat = () => {
                 key={action.id}
                 onClick={() => handleQuickAction(action)}
                 className="flex items-center gap-3 p-4 bg-white border border-slate-200 hover:border-indigo-300 rounded-2xl transition-all duration-200 hover:shadow-md group"
+                disabled={isLoading}
               >
                 <span className="text-lg">{action.icon}</span>
                 <span className="text-sm text-slate-600 group-hover:text-indigo-600 font-medium">
@@ -271,7 +385,7 @@ const XiaoBaoBaoChat = () => {
           
           <div className="flex items-center justify-center mt-3">
             <p className="text-xs text-slate-400 text-center">
-              小包包可能会产生不准确的信息，请注意核实重要信息
+              基于 DeepSeek AI 提供智能回复 · API: deepseek.jzq1020814597.workers.dev
             </p>
           </div>
         </div>
