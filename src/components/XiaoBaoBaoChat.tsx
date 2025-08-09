@@ -9,8 +9,7 @@ import {
   GET_MODELS,
   HELLO_QUERY,
   type ChatMessage as GraphQLChatMessage,
-  type ChatInput,
-  type ChatResponse 
+  type ChatInput
 } from '../lib/graphql';
 
 interface Message {
@@ -42,10 +41,7 @@ const XiaoBaoBaoChat = () => {
   // GraphQL Hooks
   const { data: modelsData, loading: modelsLoading, error: modelsError } = useQuery(GET_MODELS);
   const { data: helloData } = useQuery(HELLO_QUERY);
-  const [chatMutation, { loading: chatLoading, error: chatError }] = useMutation<
-    { chat: ChatResponse },
-    { input: ChatInput }
-  >(CHAT_MUTATION);
+  const [chatMutation, { loading: chatLoading, error: chatError }] = useMutation(CHAT_MUTATION);
 
   const isLoading = chatLoading;
   const error = chatError?.message || modelsError?.message || null;
@@ -92,20 +88,45 @@ const XiaoBaoBaoChat = () => {
 
       console.log('发送GraphQL请求:', input);
 
-      const { data } = await chatMutation({
+      const result = await chatMutation({
         variables: { input }
       });
 
-      console.log('GraphQL响应:', data);
+      console.log('GraphQL完整响应:', result);
 
-      if (data?.chat?.choices?.[0]?.message?.content) {
-        return data.chat.choices[0].message.content;
-      } else {
-        throw new Error('Invalid GraphQL response format');
+      // 更灵活的响应解析
+      let content = '';
+      
+      if (result.data) {
+        // 尝试多种可能的响应结构
+        const chatData = result.data.chat || result.data;
+        
+        if (chatData?.choices?.[0]?.message?.content) {
+          content = chatData.choices[0].message.content;
+        } else if (chatData?.message?.content) {
+          content = chatData.message.content;
+        } else if (typeof chatData === 'string') {
+          content = chatData;
+        } else {
+          console.warn('未知的响应格式:', chatData);
+          throw new Error('响应格式不匹配');
+        }
       }
+
+      if (!content) {
+        throw new Error('未收到有效的AI响应');
+      }
+
+      return content;
     } catch (error) {
       console.error('DeepSeek GraphQL Error:', error);
-      throw error;
+      
+      // 提供更详细的错误信息
+      if (error instanceof Error) {
+        throw new Error(`GraphQL错误: ${error.message}`);
+      } else {
+        throw new Error('未知的GraphQL错误');
+      }
     }
   };
 
@@ -141,7 +162,7 @@ const XiaoBaoBaoChat = () => {
       // 添加错误消息
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
-        content: `抱歉，我遇到了一些技术问题：**${error instanceof Error ? error.message : 'GraphQL API调用失败'}**\n\n请稍后重试，或者检查网络连接。如果问题持续存在，可能是API服务暂时不可用。\n\n**调试信息:**\n- GraphQL端点: https://deepseek.jzq1020814597.workers.dev\n- 错误详情: ${error instanceof Error ? error.stack : 'Unknown error'}`,
+        content: `抱歉，我遇到了一些技术问题：**${error instanceof Error ? error.message : 'GraphQL API调用失败'}**\n\n可能的原因：\n1. GraphQL服务暂时不可用\n2. 网络连接问题\n3. API响应格式变更\n\n请稍后重试，或点击右上角的"调试模式"查看详细信息。`,
         sender: 'ai',
         timestamp: new Date()
       };
