@@ -6,12 +6,12 @@ export interface ChatMessage {
   content: string;
 }
 
-export interface ChatRequest {
+export interface ChatInput {
   model?: string;
   messages: ChatMessage[];
-  maxTokens?: number;
+  max_tokens?: number;
   temperature?: number;
-  topP?: number;
+  top_p?: number;
 }
 
 export interface ChatResponse {
@@ -25,41 +25,37 @@ export interface ChatResponse {
       role: string;
       content: string;
     };
-    finishReason: string;
+    finish_reason: string;
   }[];
   usage: {
-    promptTokens: number;
-    completionTokens: number;
-    totalTokens: number;
+    prompt_tokens: number;
+    completion_tokens: number;
+    total_tokens: number;
   };
 }
 
-export interface ModelsResponse {
-  data: {
-    id: string;
-    object: string;
-    created: number;
-    ownedBy: string;
-  }[];
+export interface Model {
+  id: string;
+  object: string;
+  created: number;
+  owned_by: string;
 }
 
-// GraphQL 查询定义
+// GraphQL 查询定义 - 根据实际schema调整
 export const GET_MODELS = gql`
   query GetModels {
     models {
-      data {
-        id
-        object
-        created
-        ownedBy
-      }
+      id
+      object
+      created
+      owned_by
     }
   }
 `;
 
-export const CHAT_COMPLETION = gql`
-  mutation ChatCompletion($input: ChatCompletionInput!) {
-    chatCompletion(input: $input) {
+export const CHAT_MUTATION = gql`
+  mutation Chat($input: ChatInput!) {
+    chat(input: $input) {
       id
       object
       created
@@ -70,53 +66,49 @@ export const CHAT_COMPLETION = gql`
           role
           content
         }
-        finishReason
+        finish_reason
       }
       usage {
-        promptTokens
-        completionTokens
-        totalTokens
+        prompt_tokens
+        completion_tokens
+        total_tokens
       }
     }
   }
 `;
 
-export const TEXT_COMPLETION = gql`
-  mutation TextCompletion($input: TextCompletionInput!) {
-    textCompletion(input: $input) {
+export const COMPLETION_MUTATION = gql`
+  mutation Completion($input: CompletionInput!) {
+    completion(input: $input) {
       id
       object
       created
       model
       choices {
-        index
         text
-        finishReason
+        index
+        finish_reason
       }
       usage {
-        promptTokens
-        completionTokens
-        totalTokens
+        prompt_tokens
+        completion_tokens
+        total_tokens
       }
     }
   }
 `;
 
-// 输入类型定义
-export interface ChatCompletionInput {
-  model?: string;
-  messages: ChatMessage[];
-  maxTokens?: number;
-  temperature?: number;
-  topP?: number;
-  stream?: boolean;
-}
+export const HELLO_QUERY = gql`
+  query Hello {
+    hello
+  }
+`;
 
-export interface TextCompletionInput {
+// 输入类型定义
+export interface CompletionInput {
   model?: string;
   prompt: string;
-  maxTokens?: number;
+  max_tokens?: number;
   temperature?: number;
-  topP?: number;
-  stream?: boolean;
+  top_p?: number;
 }
