@@ -8,7 +8,7 @@ import apolloClient from './lib/apollo';
 import './index.css';
 
 export default function App() {
-  const [viewMode, setViewMode] = useState<'chat' | 'debug' | 'simple' | 'direct'>('direct');
+  const [viewMode, setViewMode] = useState<'chat' | 'debug' | 'simple' | 'direct'>('chat');
 
   return (
     <ApolloProvider client={apolloClient}>
