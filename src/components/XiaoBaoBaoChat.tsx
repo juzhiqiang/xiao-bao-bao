@@ -38,7 +38,7 @@ const XiaoBaoBaoChat = () => {
   const [hoveredMessageId, setHoveredMessageId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // 使用Apollo Client hooks - 既然测试通过了，我们就用这个
+  // GraphQL Hooks
   const { data: modelsData, loading: modelsLoading, error: modelsError } = useQuery(GET_MODELS);
   const { data: helloData } = useQuery(HELLO_QUERY);
   const [chatMutation, { loading: chatLoading, error: chatError }] = useMutation(CHAT_MUTATION);
@@ -61,7 +61,7 @@ const XiaoBaoBaoChat = () => {
     scrollToBottom();
   }, [messages]);
 
-  // 使用Apollo Client进行GraphQL调用 - 与测试模式保持一致
+  // GraphQL API调用
   const callDeepSeekGraphQL = async (userMessage: string, conversationHistory: Message[]) => {
     try {
       // 构建消息历史（只取最近5条消息）
@@ -85,7 +85,7 @@ const XiaoBaoBaoChat = () => {
         content: userMessage
       });
 
-      // 准备GraphQL输入 - 与测试模式完全一致
+      // 准备GraphQL输入
       const input: ChatInput = {
         model: 'deepseek-chat',
         messages: apiMessages,
@@ -94,33 +94,19 @@ const XiaoBaoBaoChat = () => {
         top_p: 0.9
       };
 
-      console.log('聊天模式发送GraphQL请求:', JSON.stringify(input, null, 2));
-
-      // 使用Apollo Client mutation - 与测试模式一致
+      // 使用Apollo Client mutation
       const result = await chatMutation({
         variables: { input }
       });
 
-      console.log('聊天模式GraphQL响应:', JSON.stringify(result, null, 2));
-
-      // 解析响应 - 与测试模式一致
+      // 解析响应
       if (result.data?.chat?.choices?.[0]?.message?.content) {
-        const content = result.data.chat.choices[0].message.content;
-        console.log('提取的内容:', content);
-        return content;
+        return result.data.chat.choices[0].message.content;
       } else {
-        console.error('响应格式不正确:', result.data);
         throw new Error('响应格式不匹配: 未找到choices[0].message.content');
       }
     } catch (error) {
-      console.error('聊天模式GraphQL详细错误:', error);
-      
-      // 输出详细错误信息
-      if (error instanceof Error) {
-        console.error('错误消息:', error.message);
-        console.error('错误堆栈:', error.stack);
-      }
-      
+      console.error('GraphQL调用错误:', error);
       throw error;
     }
   };
@@ -152,16 +138,16 @@ const XiaoBaoBaoChat = () => {
       
       setMessages(prev => [...prev, aiResponse]);
     } catch (error) {
-      console.error('聊天发送消息错误:', error);
+      console.error('发送消息错误:', error);
       
-      // 更详细的错误处理
+      // 错误处理
       let errorMessage = 'GraphQL API调用失败';
       
       if (error instanceof Error) {
         if (error.message.includes('Cannot read properties of undefined')) {
-          errorMessage = '请求参数格式错误 - 可能是messages字段未正确传递';
+          errorMessage = '请求参数格式错误';
         } else if (error.message.includes('Network error')) {
-          errorMessage = '网络连接错误 - 请检查网络连接';
+          errorMessage = '网络连接错误';
         } else {
           errorMessage = error.message;
         }
@@ -170,7 +156,7 @@ const XiaoBaoBaoChat = () => {
       // 添加错误消息
       const errorMsg: Message = {
         id: (Date.now() + 1).toString(),
-        content: `抱歉，我遇到了一些技术问题：**${errorMessage}**\n\n**调试信息：**\n- 错误类型: ${error instanceof Error ? error.constructor.name : typeof error}\n- 错误详情: ${error instanceof Error ? error.message : String(error)}\n\n请稍后重试，或切换到"Apollo测试"模式验证连接。`,
+        content: `抱歉，我遇到了一些技术问题：**${errorMessage}**\n\n请稍后重试。`,
         sender: 'ai',
         timestamp: new Date()
       };
