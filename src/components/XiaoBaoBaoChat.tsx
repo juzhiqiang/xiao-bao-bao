@@ -1,11 +1,17 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, User, Bot, Sparkles } from 'lucide-react';
+import { Send, User, Bot, Sparkles, Copy, RefreshCw } from 'lucide-react';
 
 interface Message {
   id: string;
   content: string;
   sender: 'user' | 'ai';
   timestamp: Date;
+}
+
+interface QuickAction {
+  id: string;
+  text: string;
+  icon: string;
 }
 
 const XiaoBaoBaoChat = () => {
@@ -19,7 +25,15 @@ const XiaoBaoBaoChat = () => {
   ]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [hoveredMessageId, setHoveredMessageId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const quickActions: QuickAction[] = [
+    { id: '1', text: '帮我写一段代码', icon: '💻' },
+    { id: '2', text: '推荐一本书', icon: '📚' },
+    { id: '3', text: '解释一个概念', icon: '💡' },
+    { id: '4', text: '翻译一段文字', icon: '🌐' },
+  ];
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -29,12 +43,13 @@ const XiaoBaoBaoChat = () => {
     scrollToBottom();
   }, [messages]);
 
-  const handleSendMessage = () => {
-    if (!inputValue.trim()) return;
+  const handleSendMessage = (content?: string) => {
+    const messageContent = content || inputValue;
+    if (!messageContent.trim()) return;
 
     const userMessage: Message = {
       id: Date.now().toString(),
-      content: inputValue,
+      content: messageContent,
       sender: 'user',
       timestamp: new Date()
     };
@@ -45,15 +60,23 @@ const XiaoBaoBaoChat = () => {
 
     // 模拟AI回复
     setTimeout(() => {
+      const responses = [
+        `关于"${messageContent}"，这是一个很好的问题！\n\n让我来为你详细解答：\n\n这个话题涉及多个方面，我可以从不同角度为你分析。你想了解哪个具体方面呢？`,
+        `我理解你提到的"${messageContent}"。\n\n🤔 这确实是个有趣的话题！\n\n根据我的理解，我可以为你提供几个建议：\n1. 首先考虑具体需求\n2. 然后分析可行性\n3. 最后制定行动计划\n\n你觉得哪个方面最重要？`,
+        `关于"${messageContent}"，我来帮你分析一下：\n\n✨ 这个问题的关键在于理解核心概念\n🎯 然后找到最适合的解决方案\n💪 最后付诸实践\n\n有什么具体的疑问我可以进一步解答的吗？`
+      ];
+
+      const randomResponse = responses[Math.floor(Math.random() * responses.length)];
+      
       const aiResponse: Message = {
         id: (Date.now() + 1).toString(),
-        content: `收到你的消息："${userMessage.content}"。作为小包包AI助手，我会尽力为你提供帮助！`,
+        content: randomResponse,
         sender: 'ai',
         timestamp: new Date()
       };
       setMessages(prev => [...prev, aiResponse]);
       setIsLoading(false);
-    }, 1000);
+    }, 1500 + Math.random() * 2000);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -61,6 +84,26 @@ const XiaoBaoBaoChat = () => {
       e.preventDefault();
       handleSendMessage();
     }
+  };
+
+  const handleQuickAction = (action: QuickAction) => {
+    handleSendMessage(action.text);
+  };
+
+  const copyMessage = (content: string) => {
+    navigator.clipboard.writeText(content);
+  };
+
+  const regenerateResponse = (messageId: string) => {
+    setIsLoading(true);
+    setTimeout(() => {
+      setMessages(prev => prev.map(msg => 
+        msg.id === messageId 
+          ? { ...msg, content: '这是重新生成的回复内容，会根据上下文提供不同的答案。' }
+          : msg
+      ));
+      setIsLoading(false);
+    }, 1000);
   };
 
   return (
@@ -88,9 +131,11 @@ const XiaoBaoBaoChat = () => {
         {messages.map((message) => (
           <div
             key={message.id}
-            className={`flex items-start gap-4 ${
+            className={`group flex items-start gap-4 ${
               message.sender === 'user' ? 'flex-row-reverse' : 'flex-row'
             }`}
+            onMouseEnter={() => setHoveredMessageId(message.id)}
+            onMouseLeave={() => setHoveredMessageId(null)}
           >
             {/* Avatar */}
             <div
@@ -107,8 +152,8 @@ const XiaoBaoBaoChat = () => {
               )}
             </div>
 
-            {/* Message Bubble */}
             <div className="flex-1 max-w-[85%]">
+              {/* Message Bubble */}
               <div
                 className={`relative rounded-3xl px-5 py-4 shadow-md transition-all duration-200 ${
                   message.sender === 'user'
@@ -132,6 +177,26 @@ const XiaoBaoBaoChat = () => {
                   })}
                 </div>
               </div>
+
+              {/* Message Actions */}
+              {message.sender === 'ai' && hoveredMessageId === message.id && (
+                <div className="flex items-center gap-2 mt-2 ml-2">
+                  <button 
+                    onClick={() => copyMessage(message.content)}
+                    className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+                    title="复制"
+                  >
+                    <Copy className="w-4 h-4 text-slate-400" />
+                  </button>
+                  <button 
+                    onClick={() => regenerateResponse(message.id)}
+                    className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+                    title="重新生成"
+                  >
+                    <RefreshCw className="w-4 h-4 text-slate-400" />
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         ))}
@@ -158,6 +223,26 @@ const XiaoBaoBaoChat = () => {
         <div ref={messagesEndRef} />
       </div>
 
+      {/* Quick Actions */}
+      {messages.length === 1 && (
+        <div className="px-6 pb-4">
+          <div className="grid grid-cols-2 gap-3">
+            {quickActions.map((action) => (
+              <button
+                key={action.id}
+                onClick={() => handleQuickAction(action)}
+                className="flex items-center gap-3 p-4 bg-white border border-slate-200 hover:border-indigo-300 rounded-2xl transition-all duration-200 hover:shadow-md group"
+              >
+                <span className="text-lg">{action.icon}</span>
+                <span className="text-sm text-slate-600 group-hover:text-indigo-600 font-medium">
+                  {action.text}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Input Area */}
       <div className="p-6 bg-white/90 backdrop-blur-md border-t border-slate-200/60">
         <div className="max-w-4xl mx-auto">
@@ -172,7 +257,7 @@ const XiaoBaoBaoChat = () => {
               disabled={isLoading}
             />
             <button
-              onClick={handleSendMessage}
+              onClick={() => handleSendMessage()}
               disabled={!inputValue.trim() || isLoading}
               className={`flex-shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-200 ${
                 inputValue.trim() && !isLoading
