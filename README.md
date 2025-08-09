@@ -5,14 +5,16 @@
 ![小包包Logo](https://img.shields.io/badge/🎯-小包包-blueviolet?style=for-the-badge)
 ![React](https://img.shields.io/badge/React-18.2.0-61DAFB?style=flat-square&logo=react)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.0.2-3178C6?style=flat-square&logo=typescript)
+![GraphQL](https://img.shields.io/badge/GraphQL-16.8.1-E10098?style=flat-square&logo=graphql)
+![Apollo](https://img.shields.io/badge/Apollo-3.8.7-311C87?style=flat-square&logo=apollo-graphql)
 ![TailwindCSS](https://img.shields.io/badge/TailwindCSS-3.3.0-06B6D4?style=flat-square&logo=tailwindcss)
 ![DeepSeek](https://img.shields.io/badge/AI-DeepSeek-FF6B6B?style=flat-square)
 ![Markdown](https://img.shields.io/badge/Markdown-Support-000000?style=flat-square&logo=markdown)
 ![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)
 
-**豆包风格的AI对话框组件** - 现代化、美观、易用的React组件，集成真实AI能力，支持完整Markdown渲染
+**豆包风格的AI对话框组件** - 现代化、美观、易用的React组件，集成GraphQL接口和真实AI能力，支持完整Markdown渲染
 
-[🚀 GitHub Pages](https://juzhiqiang.github.io/xiao-bao-bao) | [⚡ Cloudflare Pages](https://xiao-bao-bao.pages.dev) | [🤖 DeepSeek API](https://deepseek.jzq1020814597.workers.dev) | [📖 文档](#使用方法)
+[🚀 GitHub Pages](https://juzhiqiang.github.io/xiao-bao-bao) | [⚡ Cloudflare Pages](https://xiao-bao-bao.pages.dev) | [🤖 GraphQL API](https://deepseek.jzq1020814597.workers.dev) | [📖 文档](#使用方法)
 
 </div>
 
@@ -26,6 +28,7 @@
 
 ### 🤖 AI功能
 - **真实AI对话** - 接入DeepSeek AI，提供智能回复
+- **GraphQL接口** - 使用现代化的GraphQL API进行数据交互
 - **多轮对话** - 支持上下文记忆的连续对话
 - **智能问答** - 回答各种问题，提供专业建议
 - **代码辅助** - 编程相关问题和代码生成
@@ -52,14 +55,16 @@
 - **Cloudflare Pages**: https://xiao-bao-bao.pages.dev
 
 ### 🔧 API服务
-- **DeepSeek API**: https://deepseek.jzq1020814597.workers.dev
+- **GraphQL API**: https://deepseek.jzq1020814597.workers.dev
 - **支持模型**: deepseek-chat, deepseek-coder
 - **部署平台**: Cloudflare Workers
+- **接口类型**: 标准GraphQL接口
 
 ## 🛠️ 技术架构
 
 ### 前端技术
 - **框架**: React 18.2.0 + TypeScript 5.0.2
+- **GraphQL**: Apollo Client 3.8.7 + GraphQL 16.8.1
 - **样式**: TailwindCSS 3.3.0
 - **图标**: Lucide React 0.263.1
 - **构建**: Vite 4.4.5
@@ -69,6 +74,7 @@
 
 ### 后端服务
 - **AI模型**: DeepSeek Chat & Coder
+- **API类型**: GraphQL接口
 - **API代理**: Cloudflare Workers
 - **部署**: 无服务器架构
 
@@ -98,9 +104,113 @@ npm run dev
     "lucide-react": "^0.263.1",
     "react-markdown": "^9.0.1",
     "remark-gfm": "^4.0.0",
-    "rehype-highlight": "^7.0.0"
+    "rehype-highlight": "^7.0.0",
+    "@apollo/client": "^3.8.7",
+    "graphql": "^16.8.1",
+    "graphql-tag": "^2.12.6"
   }
 }
+```
+
+## 🔧 GraphQL集成
+
+### Apollo Client配置
+
+```tsx
+import { ApolloClient, InMemoryCache, createHttpLink } from '@apollo/client';
+import { setContext } from '@apollo/client/link/context';
+
+const httpLink = createHttpLink({
+  uri: 'https://deepseek.jzq1020814597.workers.dev',
+});
+
+const authLink = setContext((_, { headers }) => {
+  return {
+    headers: {
+      ...headers,
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    }
+  }
+});
+
+export const apolloClient = new ApolloClient({
+  link: authLink.concat(httpLink),
+  cache: new InMemoryCache(),
+});
+```
+
+### GraphQL查询和变更
+
+```tsx
+import { gql, useMutation, useQuery } from '@apollo/client';
+
+// 获取可用模型
+const GET_MODELS = gql`
+  query GetModels {
+    models {
+      data {
+        id
+        object
+        created
+        ownedBy
+      }
+    }
+  }
+`;
+
+// 聊天完成
+const CHAT_COMPLETION = gql`
+  mutation ChatCompletion($input: ChatCompletionInput!) {
+    chatCompletion(input: $input) {
+      id
+      object
+      created
+      model
+      choices {
+        index
+        message {
+          role
+          content
+        }
+        finishReason
+      }
+      usage {
+        promptTokens
+        completionTokens
+        totalTokens
+      }
+    }
+  }
+`;
+
+// 在组件中使用
+const { data: modelsData } = useQuery(GET_MODELS);
+const [chatCompletion, { loading, error }] = useMutation(CHAT_COMPLETION);
+```
+
+### 使用GraphQL发送消息
+
+```tsx
+const handleSendMessage = async (userMessage: string) => {
+  const input = {
+    model: 'deepseek-chat',
+    messages: [
+      { role: 'user', content: userMessage }
+    ],
+    maxTokens: 2000,
+    temperature: 0.7,
+    topP: 0.9,
+    stream: false
+  };
+
+  const { data } = await chatCompletion({
+    variables: { input }
+  });
+
+  const aiResponse = data?.chatCompletion?.choices?.[0]?.message?.content;
+  // 处理AI回复...
+};
 ```
 
 ## 📝 Markdown功能展示
@@ -121,6 +231,7 @@ print(fibonacci(10))
 ### 表格支持
 | 功能 | 支持状态 | 说明 |
 |------|---------|------|
+| GraphQL接口 | ✅ | 现代化API接口 |
 | 代码高亮 | ✅ | 多语言语法高亮 |
 | 表格渲染 | ✅ | 完美的表格显示 |
 | 链接处理 | ✅ | 新窗口打开外链 |
@@ -146,24 +257,30 @@ print(fibonacci(10))
 
 ```tsx
 import React from 'react';
+import { ApolloProvider } from '@apollo/client';
+import apolloClient from './lib/apollo';
 import XiaoBaoBaoChat from './components/XiaoBaoBaoChat';
 
 function App() {
   return (
-    <div className="App">
-      <XiaoBaoBaoChat />
-    </div>
+    <ApolloProvider client={apolloClient}>
+      <div className="App">
+        <XiaoBaoBaoChat />
+      </div>
+    </ApolloProvider>
   );
 }
 
 export default App;
 ```
 
-### 自定义API端点
+### 自定义GraphQL端点
 
 ```tsx
-// 修改 src/components/XiaoBaoBaoChat.tsx
-const API_BASE_URL = 'https://your-api-endpoint.workers.dev';
+// 修改 src/lib/apollo.ts
+const httpLink = createHttpLink({
+  uri: 'https://your-graphql-endpoint.workers.dev',
+});
 ```
 
 ## 🎨 样式定制
@@ -207,6 +324,21 @@ npm run build
 npm run build:cloudflare
 ```
 
+### Apollo配置
+```tsx
+import { ApolloClient, InMemoryCache } from '@apollo/client';
+
+const client = new ApolloClient({
+  uri: 'https://deepseek.jzq1020814597.workers.dev',
+  cache: new InMemoryCache(),
+  defaultOptions: {
+    watchQuery: { errorPolicy: 'all' },
+    query: { errorPolicy: 'all' },
+    mutate: { errorPolicy: 'all' },
+  },
+});
+```
+
 ### Markdown配置
 ```tsx
 import remarkGfm from 'remark-gfm';
@@ -220,21 +352,25 @@ rehypePlugins={[rehypeHighlight]}
 ## 🌟 核心功能
 
 ### 🤖 AI对话引擎
+- **接口**: GraphQL标准接口
 - **模型**: DeepSeek-Chat (67B参数)
 - **格式**: 支持Markdown格式回复
 - **高亮**: 自动代码语法高亮
 - **渲染**: 实时Markdown渲染
 
 ### 📊 性能优化
+- **GraphQL**: 精确数据查询，减少网络传输
+- **Apollo缓存**: 智能的查询结果缓存
 - **懒加载**: Markdown组件按需渲染
 - **语法高亮**: 高效的代码高亮处理
-- **缓存**: 智能的组件渲染缓存
 - **响应式**: 自适应的表格和代码块
 
 ## 📋 开发路线
 
 ### ✅ 已完成
 - [x] 基础UI组件开发
+- [x] GraphQL接口集成
+- [x] Apollo Client配置
 - [x] DeepSeek AI集成
 - [x] 多轮对话支持
 - [x] Markdown完整支持
@@ -245,12 +381,14 @@ rehypePlugins={[rehypeHighlight]}
 - [x] 双平台部署
 
 ### 🚧 进行中
+- [ ] GraphQL订阅支持
 - [ ] 流式Markdown渲染
 - [ ] 自定义代码主题
 - [ ] 数学公式支持(KaTeX)
 - [ ] 图片和媒体支持
 
 ### 📅 计划中
+- [ ] GraphQL片段优化
 - [ ] 实时协作编辑
 - [ ] Markdown导出功能
 - [ ] 自定义Markdown组件
@@ -263,9 +401,9 @@ rehypePlugins={[rehypeHighlight]}
 
 ### 前端贡献
 1. Fork [xiao-bao-bao](https://github.com/juzhiqiang/xiao-bao-bao) 仓库
-2. 创建功能分支：`git checkout -b feature/markdown-enhancement`
-3. 提交更改：`git commit -m 'Add markdown features'`
-4. 推送分支：`git push origin feature/markdown-enhancement`
+2. 创建功能分支：`git checkout -b feature/graphql-enhancement`
+3. 提交更改：`git commit -m 'Add GraphQL features'`
+4. 推送分支：`git push origin feature/graphql-enhancement`
 5. 提交Pull Request
 
 ### API贡献
@@ -280,12 +418,14 @@ rehypePlugins={[rehypeHighlight]}
 
 **juzhiqiang** - *项目创建者*
 - [GitHub](https://github.com/juzhiqiang)
-- [API服务](https://deepseek.jzq1020814597.workers.dev)
+- [GraphQL API服务](https://deepseek.jzq1020814597.workers.dev)
 
 ## 🙏 致谢
 
 ### 技术支持
 - [DeepSeek](https://www.deepseek.com/) - 提供强大的AI模型
+- [GraphQL](https://graphql.org/) - 现代化的API查询语言
+- [Apollo GraphQL](https://www.apollographql.com/) - GraphQL客户端和工具链
 - [React-Markdown](https://github.com/remarkjs/react-markdown) - Markdown渲染支持
 - [rehype-highlight](https://github.com/rehypejs/rehype-highlight) - 代码语法高亮
 - [remark-gfm](https://github.com/remarkjs/remark-gfm) - GitHub风格Markdown
@@ -302,7 +442,7 @@ rehypePlugins={[rehypeHighlight]}
 
 <div align="center">
 
-**🎯 现在小包包支持完整的Markdown渲染和代码高亮！**
+**🎯 现在小包包支持GraphQL接口、完整的Markdown渲染和代码高亮！**
 
 如果这个项目对你有帮助，请给个 ⭐ Star 支持一下！
 
