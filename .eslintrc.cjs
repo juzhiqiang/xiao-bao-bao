@@ -14,15 +14,16 @@ module.exports = {
       'warn',
       { allowConstantExport: true },
     ],
-    // 关闭未使用变量的严格检查，因为使用了新的JSX Transform
-    '@typescript-eslint/no-unused-vars': ['error', { 
-      'argsIgnorePattern': '^_',
-      'varsIgnorePattern': '^_'
-    }],
+    // 允许未使用的变量，但需要以下划线开头
+    '@typescript-eslint/no-unused-vars': [
+      'error', 
+      { 
+        'argsIgnorePattern': '^_',
+        'varsIgnorePattern': '^_',
+        'ignoreRestSiblings': true
+      }
+    ],
+    // 关闭对React导入的检查
+    'react/react-in-jsx-scope': 'off',
   },
-  settings: {
-    react: {
-      version: '18.2'
-    }
-  }
 }
