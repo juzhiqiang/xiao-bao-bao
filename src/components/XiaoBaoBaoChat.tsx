@@ -1,8 +1,16 @@
 import { useState, useRef, useEffect } from 'react';
 import { Send, User, Bot, Sparkles, Copy, RefreshCw, AlertCircle } from 'lucide-react';
+import { useMutation, useQuery } from '@apollo/client';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
+import { 
+  CHAT_COMPLETION, 
+  GET_MODELS,
+  type ChatMessage as GraphQLChatMessage,
+  type ChatCompletionInput,
+  type ChatResponse 
+} from '../lib/graphql';
 
 interface Message {
   id: string;
@@ -17,23 +25,28 @@ interface QuickAction {
   icon: string;
 }
 
-// DeepSeek API 配置
-const API_BASE_URL = 'https://deepseek.jzq1020814597.workers.dev';
-
 const XiaoBaoBaoChat = () => {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      content: '你好！我是小包包 🎯\n\n我现在接入了真实的 **DeepSeek AI**，支持 Markdown 格式回复，可以为你提供：\n\n• **智能问答** - 回答各种问题和深度对话\n• **代码编程** - 生成、解释和调试代码\n• **创意写作** - 文案、诗歌、故事创作\n• **学习指导** - 概念解释和学习建议\n• **技术支持** - 编程技术和最佳实践\n\n支持的格式包括：\n- 代码高亮 `console.log(\"Hello World\")`\n- **粗体** 和 *斜体* 文字\n- 列表和表格\n- 链接和引用\n\n让我们开始真正的AI对话吧！✨',
+      content: '你好！我是小包包 🎯\n\n我现在接入了真实的 **DeepSeek AI**，通过 **GraphQL API** 提供服务，支持 Markdown 格式回复，可以为你提供：\n\n• **智能问答** - 回答各种问题和深度对话\n• **代码编程** - 生成、解释和调试代码\n• **创意写作** - 文案、诗歌、故事创作\n• **学习指导** - 概念解释和学习建议\n• **技术支持** - 编程技术和最佳实践\n\n支持的格式包括：\n- 代码高亮 `console.log("Hello World")`\n- **粗体** 和 *斜体* 文字\n- 列表和表格\n- 链接和引用\n\n现在使用 GraphQL 接口，更加高效稳定！✨',
       sender: 'ai',
       timestamp: new Date()
     }
   ]);
   const [inputValue, setInputValue] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
   const [hoveredMessageId, setHoveredMessageId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // GraphQL Hooks
+  const { data: modelsData, loading: modelsLoading } = useQuery(GET_MODELS);
+  const [chatCompletion, { loading: chatLoading, error: chatError }] = useMutation<
+    { chatCompletion: ChatResponse },
+    { input: ChatCompletionInput }
+  >(CHAT_COMPLETION);
+
+  const isLoading = chatLoading;
+  const error = chatError?.message || null;
 
   const quickActions: QuickAction[] = [
     { id: '1', text: '写一个Python快速排序算法', icon: '🐍' },
@@ -50,12 +63,12 @@ const XiaoBaoBaoChat = () => {
     scrollToBottom();
   }, [messages]);
 
-  // 调用DeepSeek API
-  const callDeepSeekAPI = async (userMessage: string, conversationHistory: Message[]) => {
+  // 使用GraphQL调用DeepSeek API
+  const callDeepSeekGraphQL = async (userMessage: string, conversationHistory: Message[]) => {
     try {
       // 构建消息历史（只取最近10条消息以控制token消耗）
       const recentMessages = conversationHistory.slice(-9); // 最近9条 + 当前1条 = 10条
-      const apiMessages = recentMessages.map(msg => ({
+      const apiMessages: GraphQLChatMessage[] = recentMessages.map(msg => ({
         role: msg.sender === 'user' ? 'user' : 'assistant',
         content: msg.content
       }));
@@ -66,34 +79,27 @@ const XiaoBaoBaoChat = () => {
         content: userMessage
       });
 
-      const response = await fetch(`${API_BASE_URL}/api/chat`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'deepseek-chat',
-          messages: apiMessages,
-          max_tokens: 2000,
-          temperature: 0.7,
-          top_p: 0.9
-        })
+      // 准备GraphQL输入
+      const input: ChatCompletionInput = {
+        model: 'deepseek-chat',
+        messages: apiMessages,
+        maxTokens: 2000,
+        temperature: 0.7,
+        topP: 0.9,
+        stream: false
+      };
+
+      const { data } = await chatCompletion({
+        variables: { input }
       });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-        throw new Error(errorData.error || `HTTP ${response.status}`);
-      }
-
-      const data = await response.json();
-      
-      if (data.choices && data.choices[0] && data.choices[0].message) {
-        return data.choices[0].message.content;
+      if (data?.chatCompletion?.choices?.[0]?.message?.content) {
+        return data.chatCompletion.choices[0].message.content;
       } else {
-        throw new Error('Invalid API response format');
+        throw new Error('Invalid GraphQL response format');
       }
     } catch (error) {
-      console.error('DeepSeek API Error:', error);
+      console.error('DeepSeek GraphQL Error:', error);
       throw error;
     }
   };
@@ -101,9 +107,6 @@ const XiaoBaoBaoChat = () => {
   const handleSendMessage = async (content?: string) => {
     const messageContent = content || inputValue;
     if (!messageContent.trim() || isLoading) return;
-
-    // 清除之前的错误
-    setError(null);
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -114,11 +117,10 @@ const XiaoBaoBaoChat = () => {
 
     setMessages(prev => [...prev, userMessage]);
     setInputValue('');
-    setIsLoading(true);
 
     try {
-      // 调用真实的DeepSeek API
-      const aiContent = await callDeepSeekAPI(messageContent, messages);
+      // 调用GraphQL API
+      const aiContent = await callDeepSeekGraphQL(messageContent, messages);
       
       const aiResponse: Message = {
         id: (Date.now() + 1).toString(),
@@ -129,19 +131,16 @@ const XiaoBaoBaoChat = () => {
       
       setMessages(prev => [...prev, aiResponse]);
     } catch (error) {
-      console.error('API Error:', error);
-      setError(error instanceof Error ? error.message : 'API调用失败');
+      console.error('GraphQL API Error:', error);
       
       // 添加错误消息
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
-        content: `抱歉，我遇到了一些技术问题：**${error instanceof Error ? error.message : 'API调用失败'}**\n\n请稍后重试，或者检查网络连接。如果问题持续存在，可能是API服务暂时不可用。`,
+        content: `抱歉，我遇到了一些技术问题：**${error instanceof Error ? error.message : 'GraphQL API调用失败'}**\n\n请稍后重试，或者检查网络连接。如果问题持续存在，可能是API服务暂时不可用。`,
         sender: 'ai',
         timestamp: new Date()
       };
       setMessages(prev => [...prev, errorMessage]);
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -178,13 +177,10 @@ const XiaoBaoBaoChat = () => {
     const userMessage = messages[messageIndex - 1];
     if (!userMessage || userMessage.sender !== 'user') return;
 
-    setIsLoading(true);
-    setError(null);
-
     try {
       // 获取该消息之前的对话历史
       const conversationHistory = messages.slice(0, messageIndex - 1);
-      const aiContent = await callDeepSeekAPI(userMessage.content, conversationHistory);
+      const aiContent = await callDeepSeekGraphQL(userMessage.content, conversationHistory);
       
       setMessages(prev => prev.map(msg => 
         msg.id === messageId 
@@ -193,9 +189,6 @@ const XiaoBaoBaoChat = () => {
       ));
     } catch (error) {
       console.error('Regenerate Error:', error);
-      setError(error instanceof Error ? error.message : '重新生成失败');
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -232,6 +225,9 @@ const XiaoBaoBaoChat = () => {
     }
   };
 
+  // 获取当前可用的模型
+  const availableModel = modelsData?.models?.data?.[0]?.id || 'deepseek-chat';
+
   return (
     <div className="flex flex-col h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50">
       {/* Header */}
@@ -248,7 +244,9 @@ const XiaoBaoBaoChat = () => {
               小包包
             </h1>
             <p className="text-sm text-slate-500 font-medium">
-              {isLoading ? '正在思考中...' : 'DeepSeek AI + Markdown · 在线'}
+              {isLoading ? '正在思考中...' : 
+               modelsLoading ? '加载模型中...' : 
+               `GraphQL API + ${availableModel} · 在线`}
             </p>
           </div>
         </div>
@@ -259,15 +257,14 @@ const XiaoBaoBaoChat = () => {
         <div className="mx-6 mt-4 p-4 bg-red-50 border border-red-200 rounded-2xl flex items-center gap-3">
           <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
           <div className="flex-1">
-            <p className="text-sm text-red-800 font-medium">连接错误</p>
+            <p className="text-sm text-red-800 font-medium">GraphQL连接错误</p>
             <p className="text-sm text-red-600">{error}</p>
           </div>
           <button 
-            onClick={() => setError(null)}
+            onClick={() => window.location.reload()}
             className="text-red-400 hover:text-red-600 transition-colors"
           >
-            <span className="sr-only">关闭</span>
-            ×
+            <RefreshCw className="w-4 h-4" />
           </button>
         </div>
       )}
@@ -375,7 +372,7 @@ const XiaoBaoBaoChat = () => {
                   <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
                   <div className="w-2 h-2 bg-pink-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
                 </div>
-                <span className="text-sm text-slate-500 ml-2">小包包正在生成 Markdown 回复...</span>
+                <span className="text-sm text-slate-500 ml-2">小包包正在通过 GraphQL 生成回复...</span>
               </div>
             </div>
           </div>
@@ -433,7 +430,7 @@ const XiaoBaoBaoChat = () => {
           
           <div className="flex items-center justify-center mt-3">
             <p className="text-xs text-slate-400 text-center">
-              支持 Markdown 格式 · 基于 DeepSeek AI · API: deepseek.jzq1020814597.workers.dev
+              支持 Markdown 格式 · 基于 DeepSeek AI · GraphQL API: deepseek.jzq1020814597.workers.dev
             </p>
           </div>
         </div>
