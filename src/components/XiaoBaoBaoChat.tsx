@@ -1,16 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { Send, User, Bot, Sparkles, Copy, RefreshCw, AlertCircle } from 'lucide-react';
-import { useMutation, useQuery } from '@apollo/client';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
-import { 
-  CHAT_MUTATION, 
-  GET_MODELS,
-  HELLO_QUERY,
-  type ChatMessage as GraphQLChatMessage,
-  type ChatInput
-} from '../lib/graphql';
 
 interface Message {
   id: string;
@@ -36,15 +28,9 @@ const XiaoBaoBaoChat = () => {
   ]);
   const [inputValue, setInputValue] = useState('');
   const [hoveredMessageId, setHoveredMessageId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  // GraphQL Hooks
-  const { data: modelsData, loading: modelsLoading, error: modelsError } = useQuery(GET_MODELS);
-  const { data: helloData } = useQuery(HELLO_QUERY);
-  const [chatMutation, { loading: chatLoading, error: chatError }] = useMutation(CHAT_MUTATION);
-
-  const isLoading = chatLoading;
-  const error = chatError?.message || modelsError?.message || null;
 
   const quickActions: QuickAction[] = [
     { id: '1', text: '写一个Python快速排序算法', icon: '🐍' },
@@ -61,28 +47,19 @@ const XiaoBaoBaoChat = () => {
     scrollToBottom();
   }, [messages]);
 
-  // 使用GraphQL调用DeepSeek API
-  const callDeepSeekGraphQL = async (userMessage: string, conversationHistory: Message[]) => {
+  // 简化的GraphQL API调用
+  const callGraphQLAPI = async (userMessage: string, conversationHistory: Message[]) => {
     try {
-      // 构建消息历史（只取最近8条消息以控制token消耗）
-      const recentMessages = conversationHistory.slice(-7); // 最近7条 + 当前1条 = 8条
+      // 构建消息历史（只取最近5条消息）
+      const recentMessages = conversationHistory.slice(-4);
       
-      // 转换消息格式，确保字段正确
-      const apiMessages: GraphQLChatMessage[] = [];
+      // 构建消息数组，只包含用户消息和AI回复（跳过欢迎消息）
+      const apiMessages: Array<{role: string, content: string}> = [];
       
-      // 添加历史消息
       recentMessages.forEach(msg => {
-        if (msg.sender === 'ai') {
-          // 跳过初始欢迎消息，避免混淆
-          if (msg.id !== '1') {
-            apiMessages.push({
-              role: 'assistant',
-              content: msg.content
-            });
-          }
-        } else {
+        if (msg.id !== '1') { // 跳过欢迎消息
           apiMessages.push({
-            role: 'user',
+            role: msg.sender === 'user' ? 'user' : 'assistant',
             content: msg.content
           });
         }
@@ -94,52 +71,49 @@ const XiaoBaoBaoChat = () => {
         content: userMessage
       });
 
-      // 确保消息数组格式正确
-      const cleanMessages = apiMessages.map(msg => ({
-        role: msg.role,
-        content: msg.content
-      }));
-
-      // 准备GraphQL输入，确保字段名正确
-      const input: ChatInput = {
-        model: 'deepseek-chat',
-        messages: cleanMessages,
-        max_tokens: 2000,
-        temperature: 0.7,
-        top_p: 0.9
-      };
-
-      console.log('发送GraphQL请求:');
-      console.log('Input object:', JSON.stringify(input, null, 2));
-      console.log('Messages array:', cleanMessages);
-
-      const result = await chatMutation({
-        variables: { 
-          input: input
-        }
+      // 直接使用fetch发送GraphQL请求
+      const response = await fetch('https://deepseek.jzq1020814597.workers.dev', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          query: `
+            mutation {
+              chat(input: {
+                model: "deepseek-chat"
+                messages: ${JSON.stringify(apiMessages).replace(/"([^"]+)":/g, '$1:')}
+                max_tokens: 2000
+                temperature: 0.7
+                top_p: 0.9
+              }) {
+                choices {
+                  message {
+                    content
+                  }
+                }
+              }
+            }
+          `
+        })
       });
 
-      console.log('GraphQL完整响应:');
-      console.log('Result:', JSON.stringify(result, null, 2));
+      console.log('GraphQL请求发送，状态:', response.status);
 
-      // 解析响应
+      const result = await response.json();
+      console.log('GraphQL响应:', result);
+
+      if (result.errors) {
+        throw new Error(`GraphQL错误: ${JSON.stringify(result.errors)}`);
+      }
+
       if (result.data?.chat?.choices?.[0]?.message?.content) {
-        const content = result.data.chat.choices[0].message.content;
-        console.log('提取的内容:', content);
-        return content;
+        return result.data.chat.choices[0].message.content;
       } else {
-        console.error('响应格式不正确:', result.data);
-        throw new Error('响应格式不匹配: 未找到choices[0].message.content');
+        throw new Error(`响应格式错误: ${JSON.stringify(result)}`);
       }
     } catch (error) {
-      console.error('DeepSeek GraphQL详细错误:', error);
-      
-      // 输出详细错误信息
-      if (error instanceof Error) {
-        console.error('错误消息:', error.message);
-        console.error('错误堆栈:', error.stack);
-      }
-      
+      console.error('GraphQL调用错误:', error);
       throw error;
     }
   };
@@ -157,10 +131,11 @@ const XiaoBaoBaoChat = () => {
 
     setMessages(prev => [...prev, userMessage]);
     setInputValue('');
+    setIsLoading(true);
+    setError(null);
 
     try {
-      // 调用GraphQL API
-      const aiContent = await callDeepSeekGraphQL(messageContent, messages);
+      const aiContent = await callGraphQLAPI(messageContent, messages);
       
       const aiResponse: Message = {
         id: (Date.now() + 1).toString(),
@@ -171,29 +146,18 @@ const XiaoBaoBaoChat = () => {
       
       setMessages(prev => [...prev, aiResponse]);
     } catch (error) {
-      console.error('GraphQL API Error:', error);
+      console.error('发送消息错误:', error);
+      setError(error instanceof Error ? error.message : '未知错误');
       
-      // 更详细的错误处理
-      let errorMessage = 'GraphQL API调用失败';
-      
-      if (error instanceof Error) {
-        if (error.message.includes('Cannot read properties of undefined')) {
-          errorMessage = '请求参数格式错误 - 可能是messages字段未正确传递';
-        } else if (error.message.includes('Network error')) {
-          errorMessage = '网络连接错误 - 请检查网络连接';
-        } else {
-          errorMessage = error.message;
-        }
-      }
-      
-      // 添加错误消息
-      const errorMsg: Message = {
+      const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
-        content: `抱歉，我遇到了一些技术问题：**${errorMessage}**\n\n**调试信息：**\n- 错误类型: ${error instanceof Error ? error.constructor.name : typeof error}\n- 错误详情: ${error instanceof Error ? error.message : String(error)}\n\n请稍后重试，或点击右上角的"调试模式"查看详细信息。`,
+        content: `抱歉，我遇到了技术问题：**${error instanceof Error ? error.message : '未知错误'}**\n\n请稍后重试，或切换到"直接测试"模式检查API连接。`,
         sender: 'ai',
         timestamp: new Date()
       };
-      setMessages(prev => [...prev, errorMsg]);
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -226,14 +190,13 @@ const XiaoBaoBaoChat = () => {
     const messageIndex = messages.findIndex(msg => msg.id === messageId);
     if (messageIndex === -1) return;
     
-    // 找到该AI消息对应的用户消息
     const userMessage = messages[messageIndex - 1];
     if (!userMessage || userMessage.sender !== 'user') return;
 
+    setIsLoading(true);
     try {
-      // 获取该消息之前的对话历史
       const conversationHistory = messages.slice(0, messageIndex - 1);
-      const aiContent = await callDeepSeekGraphQL(userMessage.content, conversationHistory);
+      const aiContent = await callGraphQLAPI(userMessage.content, conversationHistory);
       
       setMessages(prev => prev.map(msg => 
         msg.id === messageId 
@@ -241,7 +204,10 @@ const XiaoBaoBaoChat = () => {
           : msg
       ));
     } catch (error) {
-      console.error('Regenerate Error:', error);
+      console.error('重新生成错误:', error);
+      setError(error instanceof Error ? error.message : '重新生成失败');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -278,10 +244,6 @@ const XiaoBaoBaoChat = () => {
     }
   };
 
-  // 获取当前可用的模型
-  const availableModel = modelsData?.models?.[0]?.id || 'deepseek-chat';
-  const connectionStatus = helloData?.hello || '连接中...';
-
   return (
     <div className="flex flex-col h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50">
       {/* Header */}
@@ -292,7 +254,7 @@ const XiaoBaoBaoChat = () => {
               <Sparkles className="w-6 h-6 text-white" />
             </div>
             <div className={`absolute -top-1 -right-1 w-5 h-5 rounded-full border-2 border-white shadow-sm ${
-              error ? 'bg-red-400' : modelsLoading ? 'bg-yellow-400' : 'bg-green-400 animate-pulse'
+              error ? 'bg-red-400' : isLoading ? 'bg-yellow-400' : 'bg-green-400 animate-pulse'
             }`}></div>
           </div>
           <div>
@@ -301,9 +263,8 @@ const XiaoBaoBaoChat = () => {
             </h1>
             <p className="text-sm text-slate-500 font-medium">
               {isLoading ? '正在思考中...' : 
-               modelsLoading ? '连接GraphQL中...' : 
-               error ? 'GraphQL连接失败' :
-               `GraphQL API + ${availableModel} · ${connectionStatus}`}
+               error ? 'GraphQL连接异常' :
+               'GraphQL API + DeepSeek · 在线'}
             </p>
           </div>
         </div>
@@ -314,29 +275,16 @@ const XiaoBaoBaoChat = () => {
         <div className="mx-6 mt-4 p-4 bg-red-50 border border-red-200 rounded-2xl flex items-center gap-3">
           <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
           <div className="flex-1">
-            <p className="text-sm text-red-800 font-medium">GraphQL连接错误</p>
+            <p className="text-sm text-red-800 font-medium">连接错误</p>
             <p className="text-sm text-red-600">{error}</p>
           </div>
           <button 
-            onClick={() => window.location.reload()}
+            onClick={() => setError(null)}
             className="text-red-400 hover:text-red-600 transition-colors"
-            title="重新连接"
           >
-            <RefreshCw className="w-4 h-4" />
+            <span className="sr-only">关闭</span>
+            ×
           </button>
-        </div>
-      )}
-
-      {/* GraphQL Status */}
-      {!error && (
-        <div className="mx-6 mt-4 p-3 bg-blue-50 border border-blue-200 rounded-2xl">
-          <div className="flex items-center gap-2 text-sm text-blue-800">
-            <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
-            <span>GraphQL状态: {connectionStatus}</span>
-            {modelsData && (
-              <span className="ml-4">可用模型: {modelsData.models?.length || 0}个</span>
-            )}
-          </div>
         </div>
       )}
 
@@ -443,7 +391,7 @@ const XiaoBaoBaoChat = () => {
                   <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
                   <div className="w-2 h-2 bg-pink-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
                 </div>
-                <span className="text-sm text-slate-500 ml-2">小包包正在通过 GraphQL 生成回复...</span>
+                <span className="text-sm text-slate-500 ml-2">小包包正在生成回复...</span>
               </div>
             </div>
           </div>
@@ -484,13 +432,13 @@ const XiaoBaoBaoChat = () => {
               placeholder="向小包包提问任何问题..."
               className="flex-1 resize-none border-0 outline-none text-slate-800 placeholder-slate-400 bg-transparent min-h-[24px] max-h-[120px] leading-6"
               rows={1}
-              disabled={isLoading || !!error}
+              disabled={isLoading}
             />
             <button
               onClick={() => handleSendMessage()}
-              disabled={!inputValue.trim() || isLoading || !!error}
+              disabled={!inputValue.trim() || isLoading}
               className={`flex-shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-200 ${
-                inputValue.trim() && !isLoading && !error
+                inputValue.trim() && !isLoading
                   ? 'bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 hover:from-indigo-600 hover:via-purple-600 hover:to-pink-600 text-white shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95'
                   : 'bg-slate-100 text-slate-400 cursor-not-allowed'
               }`}
