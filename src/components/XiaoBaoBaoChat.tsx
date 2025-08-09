@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, User, Bot, Sparkles } from 'lucide-react';
+import { Send, User, Bot, Sparkles, Copy, ThumbsUp, ThumbsDown, MoreHorizontal, RefreshCw } from 'lucide-react';
 
 interface Message {
   id: string;
@@ -9,18 +9,33 @@ interface Message {
   isTyping?: boolean;
 }
 
+interface QuickAction {
+  id: string;
+  text: string;
+  icon?: React.ReactNode;
+}
+
 const XiaoBaoBaoChat: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      content: '你好！我是小包包，你的AI助手。有什么我可以帮助你的吗？',
+      content: '你好！我是小包包 🎯\n\n我是你的智能AI助手，可以帮助你：\n• 回答各种问题\n• 协助创作和写作\n• 提供学习建议\n• 解决日常困扰\n\n有什么我可以帮助你的吗？',
       sender: 'ai',
       timestamp: new Date()
     }
   ]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [hoveredMessageId, setHoveredMessageId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const quickActions: QuickAction[] = [
+    { id: '1', text: '帮我写一段代码', icon: <span className="text-sm">💻</span> },
+    { id: '2', text: '推荐一本书', icon: <span className="text-sm">📚</span> },
+    { id: '3', text: '解释一个概念', icon: <span className="text-sm">💡</span> },
+    { id: '4', text: '翻译一段文字', icon: <span className="text-sm">🌐</span> },
+  ];
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -28,12 +43,21 @@ const XiaoBaoBaoChat: React.FC = () => {
 
   useEffect(scrollToBottom, [messages]);
 
-  const handleSendMessage = async () => {
-    if (!inputValue.trim()) return;
+  // 自动调整textarea高度
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 120) + 'px';
+    }
+  }, [inputValue]);
+
+  const handleSendMessage = async (content?: string) => {
+    const messageContent = content || inputValue;
+    if (!messageContent.trim()) return;
 
     const userMessage: Message = {
       id: Date.now().toString(),
-      content: inputValue,
+      content: messageContent,
       sender: 'user',
       timestamp: new Date()
     };
@@ -42,17 +66,25 @@ const XiaoBaoBaoChat: React.FC = () => {
     setInputValue('');
     setIsLoading(true);
 
-    // 模拟AI回复
+    // 模拟AI回复的打字效果
     setTimeout(() => {
+      const responses = [
+        `关于"${messageContent}"，这是一个很好的问题！\n\n让我来为你详细解答：\n\n这个话题涉及多个方面，我可以从不同角度为你分析。你想了解哪个具体方面呢？`,
+        `我理解你提到的"${messageContent}"。\n\n🤔 这确实是个有趣的话题！\n\n根据我的理解，我可以为你提供几个建议：\n1. 首先考虑具体需求\n2. 然后分析可行性\n3. 最后制定行动计划\n\n你觉得哪个方面最重要？`,
+        `关于"${messageContent}"，我来帮你分析一下：\n\n✨ 这个问题的关键在于理解核心概念\n🎯 然后找到最适合的解决方案\n💪 最后付诸实践\n\n有什么具体的疑问我可以进一步解答的吗？`
+      ];
+
+      const randomResponse = responses[Math.floor(Math.random() * responses.length)];
+      
       const aiResponse: Message = {
         id: (Date.now() + 1).toString(),
-        content: `我收到了你的消息："${userMessage.content}"。作为小包包AI助手，我会尽力为你提供帮助！这是一个演示回复。`,
+        content: randomResponse,
         sender: 'ai',
         timestamp: new Date()
       };
       setMessages(prev => [...prev, aiResponse]);
       setIsLoading(false);
-    }, 1000 + Math.random() * 2000);
+    }, 1500 + Math.random() * 2000);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -62,88 +94,154 @@ const XiaoBaoBaoChat: React.FC = () => {
     }
   };
 
+  const handleQuickAction = (action: QuickAction) => {
+    handleSendMessage(action.text);
+  };
+
+  const copyMessage = (content: string) => {
+    navigator.clipboard.writeText(content);
+    // 这里可以添加toast通知
+  };
+
+  const regenerateResponse = (messageId: string) => {
+    // 重新生成AI回复的逻辑
+    setIsLoading(true);
+    setTimeout(() => {
+      setMessages(prev => prev.map(msg => 
+        msg.id === messageId 
+          ? { ...msg, content: '这是重新生成的回复内容，会根据上下文提供不同的答案。' }
+          : msg
+      ));
+      setIsLoading(false);
+    }, 1000);
+  };
+
   return (
-    <div className="flex flex-col h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+    <div className="flex flex-col h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50">
       {/* Header */}
-      <div className="flex items-center justify-center py-4 px-6 bg-white/80 backdrop-blur-sm border-b border-gray-200/50 shadow-sm">
+      <div className="flex items-center justify-between py-4 px-6 bg-white/90 backdrop-blur-md border-b border-slate-200/60 shadow-sm">
         <div className="flex items-center gap-3">
           <div className="relative">
-            <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-              <Sparkles className="w-5 h-5 text-white" />
+            <div className="w-11 h-11 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-2xl flex items-center justify-center shadow-lg">
+              <Sparkles className="w-6 h-6 text-white" />
             </div>
-            <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-400 rounded-full border-2 border-white"></div>
+            <div className="absolute -top-1 -right-1 w-5 h-5 bg-green-400 rounded-full border-3 border-white shadow-sm animate-pulse"></div>
           </div>
           <div>
-            <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            <h1 className="text-xl font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
               小包包
             </h1>
-            <p className="text-sm text-gray-500">AI智能助手</p>
+            <p className="text-sm text-slate-500 font-medium">智能AI助手 · 在线</p>
           </div>
+        </div>
+        
+        <div className="flex items-center gap-2">
+          <button className="p-2 hover:bg-slate-100 rounded-xl transition-colors">
+            <MoreHorizontal className="w-5 h-5 text-slate-400" />
+          </button>
         </div>
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-6 space-y-6">
         {messages.map((message) => (
           <div
             key={message.id}
-            className={`flex items-start gap-3 ${
+            className={`group flex items-start gap-4 ${
               message.sender === 'user' ? 'flex-row-reverse' : 'flex-row'
             }`}
+            onMouseEnter={() => setHoveredMessageId(message.id)}
+            onMouseLeave={() => setHoveredMessageId(null)}
           >
             {/* Avatar */}
             <div
-              className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
+              className={`flex-shrink-0 w-10 h-10 rounded-2xl flex items-center justify-center shadow-lg ${
                 message.sender === 'user'
-                  ? 'bg-gradient-to-r from-green-400 to-blue-500'
-                  : 'bg-gradient-to-r from-purple-400 to-pink-500'
+                  ? 'bg-gradient-to-r from-blue-500 to-cyan-500'
+                  : 'bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500'
               }`}
             >
               {message.sender === 'user' ? (
-                <User className="w-4 h-4 text-white" />
+                <User className="w-5 h-5 text-white" />
               ) : (
-                <Bot className="w-4 h-4 text-white" />
+                <Bot className="w-5 h-5 text-white" />
               )}
             </div>
 
-            {/* Message Bubble */}
-            <div
-              className={`max-w-[70%] rounded-2xl px-4 py-3 ${
-                message.sender === 'user'
-                  ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-br-md'
-                  : 'bg-white shadow-md border border-gray-100 text-gray-800 rounded-bl-md'
-              }`}
-            >
-              <p className="text-sm leading-relaxed whitespace-pre-wrap">
-                {message.content}
-              </p>
+            <div className="flex-1 max-w-[85%]">
+              {/* Message Bubble */}
               <div
-                className={`text-xs mt-2 ${
+                className={`relative rounded-3xl px-5 py-4 shadow-md transition-all duration-200 ${
                   message.sender === 'user'
-                    ? 'text-blue-100'
-                    : 'text-gray-400'
+                    ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white ml-auto rounded-br-lg'
+                    : 'bg-white border border-slate-200/80 text-slate-800 rounded-bl-lg hover:shadow-lg'
                 }`}
               >
-                {message.timestamp.toLocaleTimeString('zh-CN', {
-                  hour: '2-digit',
-                  minute: '2-digit'
-                })}
+                <div className="prose prose-sm max-w-none">
+                  <p className="text-sm leading-relaxed whitespace-pre-wrap m-0">
+                    {message.content}
+                  </p>
+                </div>
+                
+                <div
+                  className={`text-xs mt-3 flex items-center justify-between ${
+                    message.sender === 'user'
+                      ? 'text-blue-100'
+                      : 'text-slate-400'
+                  }`}
+                >
+                  <span>
+                    {message.timestamp.toLocaleTimeString('zh-CN', {
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </span>
+                </div>
               </div>
+
+              {/* Message Actions */}
+              {message.sender === 'ai' && hoveredMessageId === message.id && (
+                <div className="flex items-center gap-2 mt-2 ml-2">
+                  <button 
+                    onClick={() => copyMessage(message.content)}
+                    className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+                    title="复制"
+                  >
+                    <Copy className="w-4 h-4 text-slate-400" />
+                  </button>
+                  <button 
+                    onClick={() => regenerateResponse(message.id)}
+                    className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+                    title="重新生成"
+                  >
+                    <RefreshCw className="w-4 h-4 text-slate-400" />
+                  </button>
+                  <button className="p-2 hover:bg-slate-100 rounded-lg transition-colors" title="点赞">
+                    <ThumbsUp className="w-4 h-4 text-slate-400" />
+                  </button>
+                  <button className="p-2 hover:bg-slate-100 rounded-lg transition-colors" title="点踩">
+                    <ThumbsDown className="w-4 h-4 text-slate-400" />
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         ))}
 
         {/* Loading indicator */}
         {isLoading && (
-          <div className="flex items-start gap-3">
-            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-r from-purple-400 to-pink-500 flex items-center justify-center">
-              <Bot className="w-4 h-4 text-white" />
+          <div className="flex items-start gap-4">
+            <div className="flex-shrink-0 w-10 h-10 rounded-2xl bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center shadow-lg">
+              <Bot className="w-5 h-5 text-white" />
             </div>
-            <div className="bg-white shadow-md border border-gray-100 rounded-2xl rounded-bl-md px-4 py-3">
-              <div className="flex space-x-1">
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+            <div className="bg-white border border-slate-200/80 rounded-3xl rounded-bl-lg px-5 py-4 shadow-md">
+              <div className="flex items-center gap-2">
+                <div className="flex space-x-1">
+                  <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce"></div>
+                  <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                  <div className="w-2 h-2 bg-pink-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                </div>
+                <span className="text-sm text-slate-500 ml-2">小包包正在思考...</span>
               </div>
             </div>
           </div>
@@ -152,33 +250,57 @@ const XiaoBaoBaoChat: React.FC = () => {
         <div ref={messagesEndRef} />
       </div>
 
+      {/* Quick Actions */}
+      {messages.length === 1 && (
+        <div className="px-6 pb-4">
+          <div className="grid grid-cols-2 gap-3">
+            {quickActions.map((action) => (
+              <button
+                key={action.id}
+                onClick={() => handleQuickAction(action)}
+                className="flex items-center gap-3 p-4 bg-white border border-slate-200 hover:border-indigo-300 rounded-2xl transition-all duration-200 hover:shadow-md group"
+              >
+                {action.icon}
+                <span className="text-sm text-slate-600 group-hover:text-indigo-600 font-medium">
+                  {action.text}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Input Area */}
-      <div className="p-4 bg-white/80 backdrop-blur-sm border-t border-gray-200/50">
+      <div className="p-6 bg-white/90 backdrop-blur-md border-t border-slate-200/60">
         <div className="max-w-4xl mx-auto">
-          <div className="flex items-end gap-3 bg-white rounded-2xl shadow-lg border border-gray-200/50 p-3">
+          <div className="relative flex items-end gap-4 bg-white rounded-3xl shadow-xl border border-slate-200/80 p-4 transition-all duration-200 focus-within:border-indigo-300 focus-within:shadow-2xl">
             <textarea
+              ref={textareaRef}
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyPress={handleKeyPress}
-              placeholder="输入你想说的话..."
-              className="flex-1 resize-none border-0 outline-none text-gray-800 placeholder-gray-400 bg-transparent min-h-[20px] max-h-32"
+              placeholder="向小包包提问任何问题..."
+              className="flex-1 resize-none border-0 outline-none text-slate-800 placeholder-slate-400 bg-transparent min-h-[24px] max-h-[120px] leading-6"
               rows={1}
-              style={{
-                height: 'auto',
-                minHeight: '20px'
-              }}
+              disabled={isLoading}
             />
             <button
-              onClick={handleSendMessage}
+              onClick={() => handleSendMessage()}
               disabled={!inputValue.trim() || isLoading}
-              className={`flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200 ${
+              className={`flex-shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-200 ${
                 inputValue.trim() && !isLoading
-                  ? 'bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transform hover:scale-105'
-                  : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  ? 'bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 hover:from-indigo-600 hover:via-purple-600 hover:to-pink-600 text-white shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95'
+                  : 'bg-slate-100 text-slate-400 cursor-not-allowed'
               }`}
             >
               <Send className="w-5 h-5" />
             </button>
+          </div>
+          
+          <div className="flex items-center justify-center mt-3">
+            <p className="text-xs text-slate-400 text-center">
+              小包包可能会产生不准确的信息，请注意核实重要信息
+            </p>
           </div>
         </div>
       </div>
