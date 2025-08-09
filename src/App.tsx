@@ -1,4 +1,3 @@
-import React from 'react';
 import XiaoBaoBaoChat from './components/XiaoBaoBaoChat';
 import './index.css';
 
