@@ -14,5 +14,15 @@ module.exports = {
       'warn',
       { allowConstantExport: true },
     ],
+    // 关闭未使用变量的严格检查，因为使用了新的JSX Transform
+    '@typescript-eslint/no-unused-vars': ['error', { 
+      'argsIgnorePattern': '^_',
+      'varsIgnorePattern': '^_'
+    }],
   },
+  settings: {
+    react: {
+      version: '18.2'
+    }
+  }
 }
