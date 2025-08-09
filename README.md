@@ -10,7 +10,7 @@
 
 **豆包风格的AI对话框组件** - 现代化、美观、易用的React组件
 
-[🚀 在线预览](https://juzhiqiang.github.io/xiao-bao-bao) | [📖 文档](#使用方法) | [🐛 问题反馈](https://github.com/juzhiqiang/xiao-bao-bao/issues)
+[🚀 GitHub Pages](https://juzhiqiang.github.io/xiao-bao-bao) | [⚡ Cloudflare Pages](https://xiao-bao-bao.pages.dev) | [📖 文档](#使用方法) | [🐛 问题反馈](https://github.com/juzhiqiang/xiao-bao-bao/issues)
 
 </div>
 
@@ -25,18 +25,17 @@
 - 📝 **智能输入** - 自适应高度的文本输入框
 - 🎊 **快速开始** - 内置快捷问题，一键体验
 
-## 🎬 预览
+## 🌐 在线预览
 
-### 桌面端效果
+### 多平台部署
+- **GitHub Pages**: https://juzhiqiang.github.io/xiao-bao-bao
+- **Cloudflare Pages**: https://xiao-bao-bao.pages.dev
+
+### 特色功能演示
 - 💬 流畅的对话体验
 - 🎨 现代化的UI界面  
 - 🌟 精美的动画效果
 - 📋 丰富的交互功能
-
-### 移动端效果
-- 📱 完美的响应式适配
-- 👆 触屏友好的操作
-- 🔄 流畅的滚动体验
 
 ## 🛠️ 技术栈
 
@@ -45,11 +44,11 @@
 - **样式方案**: TailwindCSS 3.3.0
 - **图标库**: Lucide React 0.263.1
 - **构建工具**: Vite 4.4.5
-- **部署平台**: GitHub Pages
+- **部署平台**: GitHub Pages + Cloudflare Pages
 
 ## 🚀 快速开始
 
-### 安装依赖
+### 本地开发
 
 ```bash
 # 克隆项目
@@ -65,9 +64,18 @@ npm install
 npm run dev
 ```
 
-### 访问项目
+### 构建部署
 
-开发服务器启动后，在浏览器中访问 `http://localhost:5173` 即可预览效果。
+```bash
+# GitHub Pages 构建
+npm run build
+
+# Cloudflare Pages 构建
+npm run build:cloudflare
+
+# 预览构建结果
+npm run preview
+```
 
 ## 📦 使用方法
 
@@ -96,14 +104,33 @@ interface Message {
   content: string;
   sender: 'user' | 'ai';
   timestamp: Date;
-  isTyping?: boolean;
 }
 
 interface QuickAction {
   id: string;
   text: string;
-  icon?: React.ReactNode;
+  icon: string;
 }
+```
+
+## 🚀 部署指南
+
+### GitHub Pages
+项目已配置自动部署，推送到main分支即可自动部署。
+
+### Cloudflare Pages
+1. 连接GitHub仓库
+2. 设置构建命令: `npm run build:cloudflare`
+3. 设置输出目录: `dist`
+4. 部署
+
+### 本地构建
+```bash
+# 标准构建
+npm run build
+
+# Cloudflare专用构建
+npm run build:cloudflare
 ```
 
 ## 🎨 设计特色
@@ -154,28 +181,21 @@ xiao-bao-bao/
 │   └── index.css         # 全局样式
 ├── .github/              # GitHub配置
 │   └── workflows/        # 自动部署配置
+├── vite.config.ts        # Vite配置 (GitHub Pages)
+├── vite.config.cloudflare.ts  # Cloudflare Pages配置
 ├── package.json          # 项目配置
-├── tsconfig.json         # TypeScript配置
-├── tailwind.config.js    # TailwindCSS配置
-└── vite.config.ts        # Vite配置
+└── README.md            # 项目文档
 ```
 
-## 🔧 构建部署
+## 🔧 环境配置
 
-### 本地构建
-```bash
-npm run build
-```
+### Vite配置说明
+- `vite.config.ts` - GitHub Pages配置 (base: '/xiao-bao-bao/')
+- `vite.config.cloudflare.ts` - Cloudflare Pages配置 (base: '/')
 
-### 预览构建结果
-```bash
-npm run preview
-```
-
-### 自动部署
-项目已配置GitHub Actions，推送到main分支后会自动部署到GitHub Pages。
-
-部署地址：https://juzhiqiang.github.io/xiao-bao-bao
+### 构建命令
+- `npm run build` - 标准构建，适用于GitHub Pages
+- `npm run build:cloudflare` - Cloudflare专用构建
 
 ## 📋 开发计划
 
