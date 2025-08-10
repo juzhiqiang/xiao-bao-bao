@@ -1,14 +1,12 @@
-import { ApolloProvider } from '@apollo/client';
-import XiaoBaoBaoChat from './components/XiaoBaoBaoChat';
-import apolloClient from './lib/apollo';
+import XiaoBaoBaoStreamingChat from './components/XiaoBaoBaoStreamingChat';
 import './index.css';
 
-export default function App() {
+function App() {
   return (
-    <ApolloProvider client={apolloClient}>
-      <div className="App">
-        <XiaoBaoBaoChat />
-      </div>
-    </ApolloProvider>
+    <div className="App">
+      <XiaoBaoBaoStreamingChat />
+    </div>
   );
 }
+
+export default App;
