@@ -10,7 +10,7 @@
 - **停止控制**：可以随时中止正在生成的回复
 - **智能备用**：自动检测流式支持，失败时自动降级到非流式模式
 
-### 🔧 技术优化
+### 🛠️ 技术优化
 - **Fetch API**：使用原生 Fetch API 处理 SSE 流式响应
 - **内存管理**：优化流式数据处理，避免内存泄漏
 - **错误处理**：完善的错误处理和重试机制
@@ -28,16 +28,19 @@
 - 🎯 **豆包风格设计** - 精美的UI界面和交互体验
 - 📝 **Markdown支持** - 完整的Markdown语法支持，包括代码高亮
 - 🔄 **GraphQL集成** - 支持GraphQL API调用
-- 💬 **智能对话** - 基于DeepSeek AI的智能对话功能
+- 💬 **智能对话** - 基于AI的智能对话功能
 - 🎨 **响应式设计** - 完美适配各种屏幕尺寸
 - ⚡ **高性能** - 基于React 18和TypeScript的现代化开发
 
 ### 新增功能
 - 🌊 **流式响应** - 实时流式显示AI回复内容
-- ⏹️ **停止生成** - 支持中途停止AI内容生成
-- 🔄 **智能降级** - 流式失败时自动使用传统模式
+- ⏹️ **停止生成功能** - 支持中途停止AI内容生成
+- 🔄 **智能降级机制** - 流式失败时自动使用传统模式
 - 📊 **状态监控** - 实时显示连接和生成状态
 - 🎭 **自然动画** - 模拟真实打字的自然显示效果
+- 🛠️ **StreamingChatHandler** - 新的流式处理核心类
+- 🎯 **ChatModeSelector** - 模式选择演示组件
+- 📱 **响应式设计优化** - 更好的移动端体验
 
 ## 🛠️ 技术栈
 
@@ -109,7 +112,7 @@ import { StreamingChatHandler } from 'xiao-bao-bao/lib/streaming';
 
 // 创建自定义配置的流式处理器
 const customHandler = new StreamingChatHandler({
-  endpoint: 'your-api-endpoint',
+  endpoint: 'https://ai-admin.juzhiqiang.shop/v1/chat/completions',
   model: 'your-model',
   temperature: 0.7,
   maxTokens: 2000
@@ -135,7 +138,7 @@ interface StreamingConfig {
 
 ```typescript
 const DEFAULT_CONFIG = {
-  endpoint: 'https://deepseek.jzq1020814597.workers.dev/v1/chat/completions',
+  endpoint: 'https://ai-admin.juzhiqiang.shop/v1/chat/completions',
   model: 'deepseek-chat',
   temperature: 0.7,
   maxTokens: 2000,
@@ -243,7 +246,7 @@ A: 修改 `StreamingChatHandler` 的配置或直接修改 `streaming.ts` 中的�
 A: 在 `StreamingConfig` 中设置 `apiKey` 参数。
 
 ### Q: 支持哪些AI模型？
-A: 目前主要支持DeepSeek系列模型，可以通过配置使用其他兼容OpenAI格式的API。
+A: 目前主要支持兼容OpenAI格式的API，可以通过配置使用其他兼容的API。
 
 ## 🤝 贡献指南
 
@@ -258,7 +261,7 @@ A: 目前主要支持DeepSeek系列模型，可以通过配置使用其他兼容
 ### v2.0.0 (2025-01-XX)
 - ✨ 新增流式响应支持
 - ⚡ 优化性能和用户体验
-- 🔧 改进错误处理机制
+- 🛠️ 改进错误处理机制
 - 🎨 更新UI设计和动画
 - 📚 完善文档和示例
 
@@ -268,7 +271,7 @@ A: 目前主要支持DeepSeek系列模型，可以通过配置使用其他兼容
 - 📝 Markdown支持
 - 🔄 GraphQL集成
 
-## 📜 许可证
+## 📄 许可证
 
 MIT License - 详见 [LICENSE](LICENSE) 文件
 
@@ -276,7 +279,7 @@ MIT License - 详见 [LICENSE](LICENSE) 文件
 
 - [在线演示](https://juzhiqiang.github.io/xiao-bao-bao)
 - [GitHub仓库](https://github.com/juzhiqiang/xiao-bao-bao)
-- [DeepSeek API文档](https://platform.deepseek.com/)
+- [API接口文档](https://ai-admin.juzhiqiang.shop)
 - [React文档](https://react.dev/)
 - [TypeScript文档](https://www.typescriptlang.org/)
 
