@@ -24,7 +24,7 @@ const XiaoBaoBaoStreamingChat = () => {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      content: '你好！我是小包包 🎯\n\n我现在支持 **流式响应**，可以实时显示回复内容，让对话更加流畅自然！\n\n我可以为你提供：\n\n• **智能问答** - 实时回答各种问题\n• **代码编程** - 流式生成和解释代码\n• **创意写作** - 逐步展示创作过程\n• **学习指导** - 渐进式知识讲解\n• **技术支持** - 实时技术答疑\n\n支持的格式包括：\n- 代码高亮 `console.log("Hello World")`\n- **粗体** 和 *斜体* 文字\n- 列表和表格\n- 链接和引用\n\n现在开始流式对话体验吧！✨',
+      content: '你好！我是小包包 🎯\n\n我现在支持 **GraphQL 流式响应**，可以实时显示回复内容，让对话更加流畅自然！\n\n我可以为你提供：\n\n• **智能问答** - 实时回答各种问题\n• **代码编程** - 流式生成和解释代码\n• **创意写作** - 逐步展示创作过程\n• **学习指导** - 渐进式知识讲解\n• **技术支持** - 实时技术答疑\n\n支持的格式包括：\n- 代码高亮 `console.log("Hello World")`\n- **粗体** 和 *斜体* 文字\n- 列表和表格\n- 链接和引用\n\n现在开始流式对话体验吧！✨',
       sender: 'ai',
       timestamp: new Date()
     }
@@ -35,6 +35,7 @@ const XiaoBaoBaoStreamingChat = () => {
   const [streamingHandler] = useState(() => new StreamingChatHandler());
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'connecting' | 'error'>('connecting');
   const [error, setError] = useState<string | null>(null);
+  const [models, setModels] = useState<any[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const currentStreamingMessage = useRef<string>('');
   const isInitialized = useRef(false);
@@ -66,15 +67,21 @@ const XiaoBaoBaoStreamingChat = () => {
     setConnectionStatus('connecting');
     try {
       const isSupported = await StreamingChatHandler.checkStreamingSupport(
-        'https://deepseek.jzq1020814597.workers.dev'
+        'https://ai-admin.juzhiqiang.shop'
       );
       setConnectionStatus(isSupported ? 'connected' : 'error');
       if (!isSupported) {
-        setError('流式API连接失败，将使用备用模式');
+        setError('GraphQL API连接失败，将使用备用模式');
+      } else {
+        // 获取可用模型
+        const availableModels = await streamingHandler.getModels();
+        setModels(availableModels);
+        setError(null);
       }
-    } catch {
+    } catch (error) {
       setConnectionStatus('error');
-      setError('无法连接到AI服务');
+      setError('无法连接到DeepSeek GraphQL服务');
+      console.error('Connection check failed:', error);
     }
   };
 
@@ -156,7 +163,7 @@ const XiaoBaoBaoStreamingChat = () => {
           msg.id === aiMessage.id 
             ? { 
                 ...msg, 
-                content: `抱歉，我遇到了技术问题：**${error.message}**\n\n请稍后重试。`,
+                content: `抱歉，我遇到了技术问题：**${error.message}**\n\n请稍后重试或检查网络连接。`,
                 isStreaming: false 
               }
             : msg
@@ -320,11 +327,11 @@ const XiaoBaoBaoStreamingChat = () => {
   const getConnectionStatusText = () => {
     switch (connectionStatus) {
       case 'connected':
-        return '流式API已连接';
+        return 'DeepSeek GraphQL API已连接';
       case 'connecting':
-        return '正在连接流式API...';
+        return '正在连接DeepSeek GraphQL API...';
       case 'error':
-        return '流式API连接失败';
+        return 'DeepSeek GraphQL API连接失败';
       default:
         return '未知状态';
     }
@@ -385,12 +392,15 @@ const XiaoBaoBaoStreamingChat = () => {
         </div>
       )}
 
-      {/* Streaming Status */}
+      {/* API Status */}
       {connectionStatus === 'connected' && (
         <div className="mx-6 mt-4 p-3 bg-blue-50 border border-blue-200 rounded-2xl">
           <div className="flex items-center gap-2 text-sm text-blue-800">
             <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
-            <span>流式响应已启用 · DeepSeek API · 实时对话体验</span>
+            <span>GraphQL 流式响应已启用 · DeepSeek API · 实时对话体验</span>
+            {models.length > 0 && (
+              <span className="text-blue-600">· {models.length} 个模型可用</span>
+            )}
           </div>
         </div>
       )}
@@ -561,7 +571,7 @@ const XiaoBaoBaoStreamingChat = () => {
           
           <div className="flex items-center justify-center mt-3">
             <p className="text-xs text-slate-400 text-center">
-              {isStreaming ? '正在流式生成回复...' : '支持 Markdown 格式 · 流式响应 · DeepSeek API'}
+              {isStreaming ? '正在流式生成回复...' : 'DeepSeek GraphQL API · 支持 Markdown 格式 · 流式响应'}
             </p>
           </div>
         </div>
