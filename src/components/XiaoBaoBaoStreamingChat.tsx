@@ -98,11 +98,11 @@ const XiaoBaoBaoStreamingChat = () => {
 
   // 处理流式响应
   const handleStreamingResponse = async (userMessage: string, conversationHistory: Message[]) => {
-    // 构建API消息格式
+    // 构建API消息格式 - 只包含历史对话，不包含当前用户消息
     const apiMessages: ChatMessage[] = [];
     
     // 添加对话历史（最近5条，排除欢迎消息）
-    const recentMessages = conversationHistory.slice(-4);
+    const recentMessages = conversationHistory.slice(-5);
     recentMessages.forEach(msg => {
       if (msg.id !== '1') {
         apiMessages.push({
@@ -233,12 +233,14 @@ const XiaoBaoBaoStreamingChat = () => {
       timestamp: new Date()
     };
 
+    // 先添加用户消息到状态
     setMessages(prev => [...prev, userMessage]);
     setInputValue('');
     setError(null);
 
-    // 处理响应
-    await handleStreamingResponse(messageContent, messages);
+    // 处理响应时传递更新后的消息列表（包含新用户消息）
+    const updatedMessages = [...messages, userMessage];
+    await handleStreamingResponse(messageContent, updatedMessages);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -277,8 +279,8 @@ const XiaoBaoBaoStreamingChat = () => {
     const userMessage = messages[messageIndex - 1];
     if (!userMessage || userMessage.sender !== 'user') return;
 
-    // 获取该消息之前的对话历史
-    const conversationHistory = messages.slice(0, messageIndex - 1);
+    // 获取该消息之前的对话历史（包含用户消息）
+    const conversationHistory = messages.slice(0, messageIndex);
     
     // 重置目标消息
     setMessages(prev => prev.map(msg => 
