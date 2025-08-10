@@ -1,9 +1,10 @@
-// 流式响应处理模块
+// 流式响应处理模块 - 基于 DeepSeek GraphQL API
 import { ChatMessage } from './graphql';
 
 // 流式响应配置
 export interface StreamingConfig {
   endpoint: string;
+  streamEndpoint: string;
   apiKey?: string;
   model?: string;
   temperature?: number;
@@ -13,12 +14,68 @@ export interface StreamingConfig {
 
 // 默认配置
 const DEFAULT_CONFIG: StreamingConfig = {
-  endpoint: 'https://ai-admin.juzhiqiang.shop/v1/chat/completions',
+  endpoint: 'https://ai-admin.juzhiqiang.shop',
+  streamEndpoint: 'https://ai-admin.juzhiqiang.shop/stream',
   model: 'deepseek-chat',
   temperature: 0.7,
   maxTokens: 2000,
   topP: 0.9
 };
+
+// GraphQL 查询定义
+const CHAT_STREAM_SUBSCRIPTION = `
+  subscription($input: ChatInput!) {
+    chatStream(input: $input) {
+      id
+      object
+      created
+      model
+      choices {
+        index
+        delta {
+          role
+          content
+        }
+        finish_reason
+      }
+    }
+  }
+`;
+
+const CHAT_MUTATION = `
+  mutation($input: ChatInput!) {
+    chat(input: $input) {
+      id
+      object
+      created
+      model
+      choices {
+        index
+        message {
+          role
+          content
+        }
+        finish_reason
+      }
+      usage {
+        prompt_tokens
+        completion_tokens
+        total_tokens
+      }
+    }
+  }
+`;
+
+const MODELS_QUERY = `
+  query {
+    models {
+      id
+      object
+      created
+      owned_by
+    }
+  }
+`;
 
 // 流式响应处理器
 export class StreamingChatHandler {
@@ -37,7 +94,7 @@ export class StreamingChatHandler {
     }
   }
 
-  // 流式聊天请求
+  // 流式聊天请求 - 使用 GraphQL Subscription
   public async streamChat(
     messages: ChatMessage[],
     onChunk: (chunk: string) => void,
@@ -48,19 +105,31 @@ export class StreamingChatHandler {
     this.abortController = new AbortController();
 
     try {
-      const response = await fetch(this.config.endpoint, {
+      // 转换消息格式为 GraphQL 输入格式
+      const graphqlMessages = messages.map(msg => ({
+        role: msg.role,
+        content: msg.content
+      }));
+
+      const response = await fetch(this.config.streamEndpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'text/event-stream',
           ...(this.config.apiKey && { 'Authorization': `Bearer ${this.config.apiKey}` })
         },
         body: JSON.stringify({
-          model: this.config.model,
-          messages: messages,
-          stream: true, // 启用流式响应
-          max_tokens: this.config.maxTokens,
-          temperature: this.config.temperature,
-          top_p: this.config.topP
+          query: CHAT_STREAM_SUBSCRIPTION,
+          variables: {
+            input: {
+              model: this.config.model,
+              messages: graphqlMessages,
+              max_tokens: this.config.maxTokens,
+              temperature: this.config.temperature,
+              top_p: this.config.topP,
+              stream: true
+            }
+          }
         }),
         signal: this.abortController.signal
       });
@@ -88,29 +157,36 @@ export class StreamingChatHandler {
           // 解码数据块
           buffer += decoder.decode(value, { stream: true });
           
-          // 处理SSE格式的数据
+          // 处理 Server-Sent Events 格式的数据
           const lines = buffer.split('\n');
           buffer = lines.pop() || ''; // 保留最后一个可能不完整的行
 
           for (const line of lines) {
             const trimmed = line.trim();
             
-            if (trimmed === '' || trimmed === 'data: [DONE]') {
+            if (trimmed === '' || trimmed.startsWith(':')) {
               continue;
             }
 
             if (trimmed.startsWith('data: ')) {
+              const dataStr = trimmed.slice(6); // 移除 'data: ' 前缀
+              
+              // 处理完成信号
+              if (dataStr === '{"type":"complete"}') {
+                onComplete();
+                return;
+              }
+
               try {
-                const jsonStr = trimmed.slice(6); // 移除 'data: ' 前缀
-                const data = JSON.parse(jsonStr);
+                const data = JSON.parse(dataStr);
                 
-                // 提取内容
-                const content = data.choices?.[0]?.delta?.content;
-                if (content) {
+                // 处理 GraphQL 响应格式
+                if (data.data?.chatStream?.choices?.[0]?.delta?.content) {
+                  const content = data.data.chatStream.choices[0].delta.content;
                   onChunk(content);
                 }
               } catch (parseError) {
-                console.warn('解析SSE数据失败:', parseError, 'Raw line:', trimmed);
+                console.warn('解析 SSE 数据失败:', parseError, 'Raw line:', trimmed);
               }
             }
           }
@@ -136,7 +212,7 @@ export class StreamingChatHandler {
     }
   }
 
-  // 备用非流式请求（用于不支持流式的情况）
+  // 备用非流式请求（使用 GraphQL Mutation）
   public async fallbackRequest(
     messages: ChatMessage[],
     onComplete: (content: string) => void,
@@ -145,6 +221,12 @@ export class StreamingChatHandler {
     this.abortController = new AbortController();
 
     try {
+      // 转换消息格式为 GraphQL 输入格式
+      const graphqlMessages = messages.map(msg => ({
+        role: msg.role,
+        content: msg.content
+      }));
+
       const response = await fetch(this.config.endpoint, {
         method: 'POST',
         headers: {
@@ -152,12 +234,17 @@ export class StreamingChatHandler {
           ...(this.config.apiKey && { 'Authorization': `Bearer ${this.config.apiKey}` })
         },
         body: JSON.stringify({
-          model: this.config.model,
-          messages: messages,
-          stream: false, // 非流式
-          max_tokens: this.config.maxTokens,
-          temperature: this.config.temperature,
-          top_p: this.config.topP
+          query: CHAT_MUTATION,
+          variables: {
+            input: {
+              model: this.config.model,
+              messages: graphqlMessages,
+              max_tokens: this.config.maxTokens,
+              temperature: this.config.temperature,
+              top_p: this.config.topP,
+              stream: false
+            }
+          }
         }),
         signal: this.abortController.signal
       });
@@ -167,12 +254,18 @@ export class StreamingChatHandler {
       }
 
       const result = await response.json();
-      const content = result.choices?.[0]?.message?.content;
+      
+      // 处理 GraphQL 错误
+      if (result.errors) {
+        throw new Error(result.errors[0]?.message || '未知错误');
+      }
+
+      const content = result.data?.chat?.choices?.[0]?.message?.content;
       
       if (content) {
         onComplete(content);
       } else {
-        throw new Error('响应格式错误');
+        throw new Error('响应格式错误：未找到消息内容');
       }
 
     } catch (error) {
@@ -193,15 +286,55 @@ export class StreamingChatHandler {
   // 检查是否支持流式响应
   public static async checkStreamingSupport(endpoint: string): Promise<boolean> {
     try {
-      const response = await fetch(endpoint.replace('/v1/chat/completions', '/v1/models'), {
-        method: 'GET',
+      const response = await fetch(endpoint, {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json'
-        }
+        },
+        body: JSON.stringify({
+          query: MODELS_QUERY
+        })
       });
-      return response.ok;
+      
+      if (!response.ok) {
+        return false;
+      }
+
+      const result = await response.json();
+      return !result.errors && result.data?.models;
     } catch {
       return false;
+    }
+  }
+
+  // 获取可用模型
+  public async getModels(): Promise<any[]> {
+    try {
+      const response = await fetch(this.config.endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(this.config.apiKey && { 'Authorization': `Bearer ${this.config.apiKey}` })
+        },
+        body: JSON.stringify({
+          query: MODELS_QUERY
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      
+      if (result.errors) {
+        throw new Error(result.errors[0]?.message || '未知错误');
+      }
+
+      return result.data?.models || [];
+    } catch (error) {
+      console.error('获取模型列表失败:', error);
+      return [];
     }
   }
 }
@@ -236,7 +369,7 @@ export function simulateNaturalTyping(
   baseDelay: number = 50
 ): void {
   // 按标点符号和空格分割文本，保持更自然的显示
-  const chunks = text.split(/([\u3002\uff01\uff1f\uff0c\u3001\uff1b\uff1a\s]+)/).filter(chunk => chunk.length > 0);
+  const chunks = text.split(/([。！？，、；：\s]+)/).filter(chunk => chunk.length > 0);
   let index = 0;
 
   const showNextChunk = () => {
@@ -247,9 +380,9 @@ export function simulateNaturalTyping(
       
       // 根据内容类型调整延迟
       let delay = baseDelay;
-      if (/[\u3002\uff01\uff1f]/.test(chunk)) {
+      if (/[。！？]/.test(chunk)) {
         delay = baseDelay * 3; // 句号后稍长停顿
-      } else if (/[\uff0c\u3001\uff1b\uff1a]/.test(chunk)) {
+      } else if (/[，、；：]/.test(chunk)) {
         delay = baseDelay * 2; // 逗号后短停顿
       }
       
