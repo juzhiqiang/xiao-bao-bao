@@ -1,7 +1,7 @@
 {
   "name": "xiao-bao-bao",
-  "version": "1.0.0",
-  "description": "🤖 小包包 - 豆包风格的AI对话框组件 (React + TypeScript)",
+  "version": "2.0.0",
+  "description": "🤖 小包包 - 豆包风格的AI对话框组件 (React + TypeScript) 支持流式响应",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
@@ -22,7 +22,11 @@
     "豆包",
     "小包包",
     "markdown",
-    "graphql"
+    "graphql",
+    "streaming",
+    "sse",
+    "realtime",
+    "流式响应"
   ],
   "author": "juzhiqiang",
   "license": "MIT",
@@ -53,5 +57,12 @@
     "typescript": "^5.0.2",
     "vite": "^4.4.5"
   },
-  "homepage": "https://juzhiqiang.github.io/xiao-bao-bao"
+  "homepage": "https://juzhiqiang.github.io/xiao-bao-bao",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/juzhiqiang/xiao-bao-bao.git"
+  },
+  "bugs": {
+    "url": "https://github.com/juzhiqiang/xiao-bao-bao/issues"
+  }
 }
