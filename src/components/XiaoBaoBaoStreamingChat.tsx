@@ -97,57 +97,73 @@ const XiaoBaoBaoStreamingChat = () => {
   };
 
   // 处理流式响应
-  const handleStreamingResponse = async (userMessage: string, conversationHistory: Message[]) => {
-    // 构建API消息格式 - 只包含历史对话，不包含当前用户消息
+  const handleStreamingResponse = async (userMessage: string) => {
+    // 构建API消息格式 - 从当前messages状态中获取历史
     const apiMessages: ChatMessage[] = [];
     
-    // 添加对话历史（最近5条，排除欢迎消息）
-    const recentMessages = conversationHistory.slice(-5);
-    recentMessages.forEach(msg => {
-      if (msg.id !== '1') {
-        apiMessages.push({
-          role: msg.sender === 'user' ? 'user' : 'assistant',
-          content: msg.content
-        });
-      }
+    // 获取最新的messages状态，包含刚添加的用户消息
+    setMessages(currentMessages => {
+      // 添加对话历史（最近5条，排除欢迎消息，但不包含当前正在添加的用户消息）
+      const conversationHistory = currentMessages.slice(-5);
+      conversationHistory.forEach(msg => {
+        if (msg.id !== '1') {
+          apiMessages.push({
+            role: msg.sender === 'user' ? 'user' : 'assistant',
+            content: msg.content
+          });
+        }
+      });
+
+      // 添加当前用户消息
+      apiMessages.push({
+        role: 'user',
+        content: userMessage
+      });
+
+      // 创建AI响应消息
+      const aiMessage: Message = {
+        id: Date.now().toString(),
+        content: '',
+        sender: 'ai',
+        timestamp: new Date(),
+        isStreaming: true
+      };
+
+      return [...currentMessages, aiMessage];
     });
 
-    // 添加当前用户消息
-    apiMessages.push({
-      role: 'user',
-      content: userMessage
-    });
-
-    // 创建AI响应消息
-    const aiMessage: Message = {
-      id: Date.now().toString(),
-      content: '',
-      sender: 'ai',
-      timestamp: new Date(),
-      isStreaming: true
-    };
-
-    setMessages(prev => [...prev, aiMessage]);
     setIsStreaming(true);
     currentStreamingMessage.current = '';
 
     // 流式响应处理
     const onChunk = (chunk: string) => {
       currentStreamingMessage.current += chunk;
-      setMessages(prev => prev.map(msg => 
-        msg.id === aiMessage.id 
-          ? { ...msg, content: currentStreamingMessage.current }
-          : msg
-      ));
+      setMessages(prev => {
+        const lastMessage = prev[prev.length - 1];
+        if (lastMessage && lastMessage.sender === 'ai') {
+          return prev.map((msg, index) => 
+            index === prev.length - 1 
+              ? { ...msg, content: currentStreamingMessage.current }
+              : msg
+          );
+        }
+        return prev;
+      });
     };
 
     const onComplete = () => {
       setIsStreaming(false);
-      setMessages(prev => prev.map(msg => 
-        msg.id === aiMessage.id 
-          ? { ...msg, isStreaming: false }
-          : msg
-      ));
+      setMessages(prev => {
+        const lastMessage = prev[prev.length - 1];
+        if (lastMessage && lastMessage.sender === 'ai') {
+          return prev.map((msg, index) => 
+            index === prev.length - 1 
+              ? { ...msg, isStreaming: false }
+              : msg
+          );
+        }
+        return prev;
+      });
       currentStreamingMessage.current = '';
     };
 
@@ -157,17 +173,23 @@ const XiaoBaoBaoStreamingChat = () => {
       
       // 如果流式失败，尝试备用方案
       if (connectionStatus === 'connected') {
-        handleFallbackResponse(apiMessages, aiMessage.id);
+        handleFallbackResponse(apiMessages);
       } else {
-        setMessages(prev => prev.map(msg => 
-          msg.id === aiMessage.id 
-            ? { 
-                ...msg, 
-                content: `抱歉，我遇到了技术问题：**${error.message}**\n\n请稍后重试或检查网络连接。`,
-                isStreaming: false 
-              }
-            : msg
-        ));
+        setMessages(prev => {
+          const lastMessage = prev[prev.length - 1];
+          if (lastMessage && lastMessage.sender === 'ai') {
+            return prev.map((msg, index) => 
+              index === prev.length - 1 
+                ? { 
+                    ...msg, 
+                    content: `抱歉，我遇到了技术问题：**${error.message}**\n\n请稍后重试或检查网络连接。`,
+                    isStreaming: false 
+                  }
+                : msg
+            );
+          }
+          return prev;
+        });
       }
     };
 
@@ -180,27 +202,39 @@ const XiaoBaoBaoStreamingChat = () => {
   };
 
   // 备用响应处理（非流式）
-  const handleFallbackResponse = async (apiMessages: ChatMessage[], messageId: string) => {
+  const handleFallbackResponse = async (apiMessages: ChatMessage[]) => {
     const onComplete = (content: string) => {
       // 使用自然打字效果模拟流式显示
       let currentContent = '';
       
       const onChunk = (chunk: string) => {
         currentContent += chunk;
-        setMessages(prev => prev.map(msg => 
-          msg.id === messageId 
-            ? { ...msg, content: currentContent }
-            : msg
-        ));
+        setMessages(prev => {
+          const lastMessage = prev[prev.length - 1];
+          if (lastMessage && lastMessage.sender === 'ai') {
+            return prev.map((msg, index) => 
+              index === prev.length - 1 
+                ? { ...msg, content: currentContent }
+                : msg
+            );
+          }
+          return prev;
+        });
       };
       
       const onTypingComplete = () => {
         setIsStreaming(false);
-        setMessages(prev => prev.map(msg => 
-          msg.id === messageId 
-            ? { ...msg, isStreaming: false }
-            : msg
-        ));
+        setMessages(prev => {
+          const lastMessage = prev[prev.length - 1];
+          if (lastMessage && lastMessage.sender === 'ai') {
+            return prev.map((msg, index) => 
+              index === prev.length - 1 
+                ? { ...msg, isStreaming: false }
+                : msg
+            );
+          }
+          return prev;
+        });
       };
       
       simulateNaturalTyping(content, onChunk, onTypingComplete, 30);
@@ -208,15 +242,21 @@ const XiaoBaoBaoStreamingChat = () => {
 
     const onError = (error: Error) => {
       setIsStreaming(false);
-      setMessages(prev => prev.map(msg => 
-        msg.id === messageId 
-          ? { 
-              ...msg, 
-              content: `抱歉，我遇到了技术问题：**${error.message}**\n\n请稍后重试。`,
-              isStreaming: false 
-            }
-          : msg
-      ));
+      setMessages(prev => {
+        const lastMessage = prev[prev.length - 1];
+        if (lastMessage && lastMessage.sender === 'ai') {
+          return prev.map((msg, index) => 
+            index === prev.length - 1 
+              ? { 
+                  ...msg, 
+                  content: `抱歉，我遇到了技术问题：**${error.message}**\n\n请稍后重试。`,
+                  isStreaming: false 
+                }
+              : msg
+          );
+        }
+        return prev;
+      });
     };
 
     await streamingHandler.fallbackRequest(apiMessages, onComplete, onError);
@@ -233,14 +273,13 @@ const XiaoBaoBaoStreamingChat = () => {
       timestamp: new Date()
     };
 
-    // 先添加用户消息到状态
+    // 添加用户消息
     setMessages(prev => [...prev, userMessage]);
     setInputValue('');
     setError(null);
 
-    // 处理响应时传递更新后的消息列表（包含新用户消息）
-    const updatedMessages = [...messages, userMessage];
-    await handleStreamingResponse(messageContent, updatedMessages);
+    // 处理AI响应
+    await handleStreamingResponse(messageContent);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -279,9 +318,6 @@ const XiaoBaoBaoStreamingChat = () => {
     const userMessage = messages[messageIndex - 1];
     if (!userMessage || userMessage.sender !== 'user') return;
 
-    // 获取该消息之前的对话历史（包含用户消息）
-    const conversationHistory = messages.slice(0, messageIndex);
-    
     // 重置目标消息
     setMessages(prev => prev.map(msg => 
       msg.id === messageId 
@@ -289,8 +325,67 @@ const XiaoBaoBaoStreamingChat = () => {
         : msg
     ));
 
-    // 重新生成响应
-    await handleStreamingResponse(userMessage.content, conversationHistory);
+    // 构建API消息格式 - 获取该消息之前的历史
+    const apiMessages: ChatMessage[] = [];
+    const conversationHistory = messages.slice(0, messageIndex - 1);
+    
+    conversationHistory.forEach(msg => {
+      if (msg.id !== '1') {
+        apiMessages.push({
+          role: msg.sender === 'user' ? 'user' : 'assistant',
+          content: msg.content
+        });
+      }
+    });
+
+    // 添加用户消息
+    apiMessages.push({
+      role: 'user',
+      content: userMessage.content
+    });
+
+    setIsStreaming(true);
+    currentStreamingMessage.current = '';
+
+    // 流式响应处理
+    const onChunk = (chunk: string) => {
+      currentStreamingMessage.current += chunk;
+      setMessages(prev => prev.map(msg => 
+        msg.id === messageId 
+          ? { ...msg, content: currentStreamingMessage.current }
+          : msg
+      ));
+    };
+
+    const onComplete = () => {
+      setIsStreaming(false);
+      setMessages(prev => prev.map(msg => 
+        msg.id === messageId 
+          ? { ...msg, isStreaming: false }
+          : msg
+      ));
+      currentStreamingMessage.current = '';
+    };
+
+    const onError = (error: Error) => {
+      setIsStreaming(false);
+      setMessages(prev => prev.map(msg => 
+        msg.id === messageId 
+          ? { 
+              ...msg, 
+              content: `抱歉，我遇到了技术问题：**${error.message}**\n\n请稍后重试。`,
+              isStreaming: false 
+            }
+          : msg
+      ));
+    };
+
+    // 开始流式请求
+    try {
+      await streamingHandler.streamChat(apiMessages, onChunk, onComplete, onError);
+    } catch (error) {
+      onError(error instanceof Error ? error : new Error('未知错误'));
+    }
   };
 
   // Markdown 自定义组件
