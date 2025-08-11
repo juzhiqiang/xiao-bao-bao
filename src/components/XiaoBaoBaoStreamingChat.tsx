@@ -90,12 +90,17 @@ const XiaoBaoBaoStreamingChat = () => {
   const stopStreaming = () => {
     streamingHandler.abort();
     setIsStreaming(false);
-    currentAiMessageId.current = '';
     
-    // 如果有未完成的流式消息，将其标记为完成
-    setMessages(prev => prev.map(msg => 
-      msg.isStreaming ? { ...msg, isStreaming: false } : msg
-    ));
+    // 如果有未完成的流式消息，将其标记为完成，但保留内容
+    if (currentAiMessageId.current) {
+      setMessages(prev => prev.map(msg => {
+        if (msg.id === currentAiMessageId.current && msg.sender === 'ai') {
+          return { ...msg, isStreaming: false };
+        }
+        return msg;
+      }));
+      currentAiMessageId.current = '';
+    }
   };
 
   // 处理流式响应
@@ -153,22 +158,30 @@ const XiaoBaoBaoStreamingChat = () => {
 
     const onComplete = () => {
       const targetMessageId = currentAiMessageId.current;
-      setIsStreaming(false);
-      currentAiMessageId.current = '';
+      const finalContent = currentStreamingMessage.current;
       
+      setIsStreaming(false);
+      
+      // 确保最终内容被正确保存
       setMessages(prev => prev.map(msg => {
         if (msg.id === targetMessageId && msg.sender === 'ai') {
-          return { ...msg, isStreaming: false };
+          return { 
+            ...msg, 
+            content: finalContent, // 使用保存的最终内容
+            isStreaming: false 
+          };
         }
         return msg;
       }));
+      
+      // 清理refs
+      currentAiMessageId.current = '';
       currentStreamingMessage.current = '';
     };
 
     const onError = (error: Error) => {
       const targetMessageId = currentAiMessageId.current;
       setIsStreaming(false);
-      currentAiMessageId.current = '';
       console.error('流式响应错误:', error);
       
       // 如果流式失败，尝试备用方案
@@ -185,6 +198,9 @@ const XiaoBaoBaoStreamingChat = () => {
           }
           return msg;
         }));
+        // 清理refs
+        currentAiMessageId.current = '';
+        currentStreamingMessage.current = '';
       }
     };
 
@@ -216,10 +232,13 @@ const XiaoBaoBaoStreamingChat = () => {
         setIsStreaming(false);
         setMessages(prev => prev.map(msg => {
           if (msg.id === messageId && msg.sender === 'ai') {
-            return { ...msg, isStreaming: false };
+            return { ...msg, content: currentContent, isStreaming: false };
           }
           return msg;
         }));
+        // 清理refs
+        currentAiMessageId.current = '';
+        currentStreamingMessage.current = '';
       };
       
       simulateNaturalTyping(content, onChunk, onTypingComplete, 30);
@@ -237,6 +256,9 @@ const XiaoBaoBaoStreamingChat = () => {
         }
         return msg;
       }));
+      // 清理refs
+      currentAiMessageId.current = '';
+      currentStreamingMessage.current = '';
     };
 
     await streamingHandler.fallbackRequest(apiMessages, onComplete, onError);
@@ -342,20 +364,23 @@ const XiaoBaoBaoStreamingChat = () => {
     };
 
     const onComplete = () => {
+      const finalContent = currentStreamingMessage.current;
       setIsStreaming(false);
-      currentAiMessageId.current = '';
+      
       setMessages(prev => prev.map(msg => {
         if (msg.id === messageId && msg.sender === 'ai') {
-          return { ...msg, isStreaming: false };
+          return { ...msg, content: finalContent, isStreaming: false };
         }
         return msg;
       }));
+      
+      // 清理refs
+      currentAiMessageId.current = '';
       currentStreamingMessage.current = '';
     };
 
     const onError = (error: Error) => {
       setIsStreaming(false);
-      currentAiMessageId.current = '';
       setMessages(prev => prev.map(msg => {
         if (msg.id === messageId && msg.sender === 'ai') {
           return {
@@ -366,6 +391,9 @@ const XiaoBaoBaoStreamingChat = () => {
         }
         return msg;
       }));
+      // 清理refs
+      currentAiMessageId.current = '';
+      currentStreamingMessage.current = '';
     };
 
     // 开始流式请求
