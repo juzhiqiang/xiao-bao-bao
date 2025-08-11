@@ -38,6 +38,7 @@ const XiaoBaoBaoStreamingChat = () => {
   const [models, setModels] = useState<any[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const currentStreamingMessage = useRef<string>('');
+  const currentAiMessageId = useRef<string>('');
   const isInitialized = useRef(false);
 
   const quickActions: QuickAction[] = [
@@ -89,6 +90,7 @@ const XiaoBaoBaoStreamingChat = () => {
   const stopStreaming = () => {
     streamingHandler.abort();
     setIsStreaming(false);
+    currentAiMessageId.current = '';
     
     // 如果有未完成的流式消息，将其标记为完成
     setMessages(prev => prev.map(msg => 
@@ -127,6 +129,9 @@ const XiaoBaoBaoStreamingChat = () => {
       isStreaming: true
     };
 
+    // 设置当前AI消息ID
+    currentAiMessageId.current = aiMessage.id;
+
     // 添加AI消息到状态
     setMessages(prev => [...prev, aiMessage]);
     setIsStreaming(true);
@@ -135,40 +140,51 @@ const XiaoBaoBaoStreamingChat = () => {
     // 流式响应处理
     const onChunk = (chunk: string) => {
       currentStreamingMessage.current += chunk;
-      setMessages(prev => prev.map(msg => 
-        msg.id === aiMessage.id 
-          ? { ...msg, content: currentStreamingMessage.current }
-          : msg
-      ));
+      const targetMessageId = currentAiMessageId.current;
+      
+      setMessages(prev => prev.map(msg => {
+        // 只更新目标AI消息，不影响其他消息
+        if (msg.id === targetMessageId && msg.sender === 'ai') {
+          return { ...msg, content: currentStreamingMessage.current };
+        }
+        return msg;
+      }));
     };
 
     const onComplete = () => {
+      const targetMessageId = currentAiMessageId.current;
       setIsStreaming(false);
-      setMessages(prev => prev.map(msg => 
-        msg.id === aiMessage.id 
-          ? { ...msg, isStreaming: false }
-          : msg
-      ));
+      currentAiMessageId.current = '';
+      
+      setMessages(prev => prev.map(msg => {
+        if (msg.id === targetMessageId && msg.sender === 'ai') {
+          return { ...msg, isStreaming: false };
+        }
+        return msg;
+      }));
       currentStreamingMessage.current = '';
     };
 
     const onError = (error: Error) => {
+      const targetMessageId = currentAiMessageId.current;
       setIsStreaming(false);
+      currentAiMessageId.current = '';
       console.error('流式响应错误:', error);
       
       // 如果流式失败，尝试备用方案
       if (connectionStatus === 'connected') {
-        handleFallbackResponse(apiMessages, aiMessage.id);
+        handleFallbackResponse(apiMessages, targetMessageId);
       } else {
-        setMessages(prev => prev.map(msg => 
-          msg.id === aiMessage.id 
-            ? { 
-                ...msg, 
-                content: `抱歉，我遇到了技术问题：**${error.message}**\n\n请稍后重试或检查网络连接。`,
-                isStreaming: false 
-              }
-            : msg
-        ));
+        setMessages(prev => prev.map(msg => {
+          if (msg.id === targetMessageId && msg.sender === 'ai') {
+            return {
+              ...msg,
+              content: `抱歉，我遇到了技术问题：**${error.message}**\n\n请稍后重试或检查网络连接。`,
+              isStreaming: false
+            };
+          }
+          return msg;
+        }));
       }
     };
 
@@ -188,20 +204,22 @@ const XiaoBaoBaoStreamingChat = () => {
       
       const onChunk = (chunk: string) => {
         currentContent += chunk;
-        setMessages(prev => prev.map(msg => 
-          msg.id === messageId 
-            ? { ...msg, content: currentContent }
-            : msg
-        ));
+        setMessages(prev => prev.map(msg => {
+          if (msg.id === messageId && msg.sender === 'ai') {
+            return { ...msg, content: currentContent };
+          }
+          return msg;
+        }));
       };
       
       const onTypingComplete = () => {
         setIsStreaming(false);
-        setMessages(prev => prev.map(msg => 
-          msg.id === messageId 
-            ? { ...msg, isStreaming: false }
-            : msg
-        ));
+        setMessages(prev => prev.map(msg => {
+          if (msg.id === messageId && msg.sender === 'ai') {
+            return { ...msg, isStreaming: false };
+          }
+          return msg;
+        }));
       };
       
       simulateNaturalTyping(content, onChunk, onTypingComplete, 30);
@@ -209,15 +227,16 @@ const XiaoBaoBaoStreamingChat = () => {
 
     const onError = (error: Error) => {
       setIsStreaming(false);
-      setMessages(prev => prev.map(msg => 
-        msg.id === messageId 
-          ? { 
-              ...msg, 
-              content: `抱歉，我遇到了技术问题：**${error.message}**\n\n请稍后重试。`,
-              isStreaming: false 
-            }
-          : msg
-      ));
+      setMessages(prev => prev.map(msg => {
+        if (msg.id === messageId && msg.sender === 'ai') {
+          return {
+            ...msg,
+            content: `抱歉，我遇到了技术问题：**${error.message}**\n\n请稍后重试。`,
+            isStreaming: false
+          };
+        }
+        return msg;
+      }));
     };
 
     await streamingHandler.fallbackRequest(apiMessages, onComplete, onError);
@@ -281,11 +300,13 @@ const XiaoBaoBaoStreamingChat = () => {
     if (!userMessage || userMessage.sender !== 'user') return;
 
     // 重置目标消息
-    setMessages(prev => prev.map(msg => 
-      msg.id === messageId 
-        ? { ...msg, content: '', isStreaming: true }
-        : msg
-    ));
+    currentAiMessageId.current = messageId;
+    setMessages(prev => prev.map(msg => {
+      if (msg.id === messageId && msg.sender === 'ai') {
+        return { ...msg, content: '', isStreaming: true };
+      }
+      return msg;
+    }));
 
     // 构建API消息格式 - 获取该消息之前的历史
     const apiMessages: ChatMessage[] = [];
@@ -312,34 +333,39 @@ const XiaoBaoBaoStreamingChat = () => {
     // 流式响应处理
     const onChunk = (chunk: string) => {
       currentStreamingMessage.current += chunk;
-      setMessages(prev => prev.map(msg => 
-        msg.id === messageId 
-          ? { ...msg, content: currentStreamingMessage.current }
-          : msg
-      ));
+      setMessages(prev => prev.map(msg => {
+        if (msg.id === messageId && msg.sender === 'ai') {
+          return { ...msg, content: currentStreamingMessage.current };
+        }
+        return msg;
+      }));
     };
 
     const onComplete = () => {
       setIsStreaming(false);
-      setMessages(prev => prev.map(msg => 
-        msg.id === messageId 
-          ? { ...msg, isStreaming: false }
-          : msg
-      ));
+      currentAiMessageId.current = '';
+      setMessages(prev => prev.map(msg => {
+        if (msg.id === messageId && msg.sender === 'ai') {
+          return { ...msg, isStreaming: false };
+        }
+        return msg;
+      }));
       currentStreamingMessage.current = '';
     };
 
     const onError = (error: Error) => {
       setIsStreaming(false);
-      setMessages(prev => prev.map(msg => 
-        msg.id === messageId 
-          ? { 
-              ...msg, 
-              content: `抱歉，我遇到了技术问题：**${error.message}**\n\n请稍后重试。`,
-              isStreaming: false 
-            }
-          : msg
-      ));
+      currentAiMessageId.current = '';
+      setMessages(prev => prev.map(msg => {
+        if (msg.id === messageId && msg.sender === 'ai') {
+          return {
+            ...msg,
+            content: `抱歉，我遇到了技术问题：**${error.message}**\n\n请稍后重试。`,
+            isStreaming: false
+          };
+        }
+        return msg;
+      }));
     };
 
     // 开始流式请求
