@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>小包包 - AI对话框组件</title>
+    <script>
+      // GitHub Pages SPA路由修复
+      // 将404重定向回index.html，并保留路径信息
+      const segment = window.location.pathname.split('/').slice(2).join('/');
+      if (segment) {
+        window.history.replaceState(null, null, '/xiao-bao-bao/' + '?p=/' + segment);
+      }
+      window.location.replace('/xiao-bao-bao/');
+    </script>
+  </head>
+  <body>
+    <div style="text-align: center; padding: 50px; font-family: Arial, sans-serif;">
+      <h1>正在重定向...</h1>
+      <p>如果页面没有自动跳转，请<a href="/xiao-bao-bao/">点击这里</a></p>
+    </div>
+  </body>
+</html>
