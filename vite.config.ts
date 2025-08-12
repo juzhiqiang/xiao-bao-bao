@@ -6,9 +6,11 @@ export default defineConfig(({ command, mode }) => {
   // 根据环境自动设置base路径
   // GitHub Pages需要仓库名作为base路径
   // Cloudflare Pages和本地开发使用根路径
-  const base = mode === 'production' && process.env.GITHUB_ACTIONS
-    ? '/xiao-bao-bao/'  // GitHub Pages
-    : '/'               // Cloudflare Pages 或本地开发
+  const isGitHubPages = mode === 'production' && 
+    (globalThis.process?.env?.GITHUB_ACTIONS || 
+     globalThis.process?.env?.CI === 'true');
+  
+  const base = isGitHubPages ? '/xiao-bao-bao/' : '/';
 
   return {
     plugins: [react()],
