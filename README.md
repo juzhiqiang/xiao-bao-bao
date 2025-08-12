@@ -1,71 +1,82 @@
-# 🤖 小包包 (XiaoBaoBao)
+# 小包包 (XiaoBaoBao)
 
-豆包风格的AI对话框组件，基于 React + TypeScript 开发，支持 **流式响应** 和 Markdown 格式显示。
+🤖 豆包风格的AI对话框组件 (React + TypeScript) 支持流式响应与合同审核
 
-## ✨ 新增特性
+[![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](https://choosealicense.com/licenses/mit/)
+[![Version](https://img.shields.io/badge/version-2.0.0-blue.svg)](https://github.com/juzhiqiang/xiao-bao-bao)
+[![React](https://img.shields.io/badge/React-18.2.0-blue.svg)](https://reactjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0.2-blue.svg)](https://www.typescriptlang.org/)
 
-### 🚀 流式响应
-- **实时显示**：不再等待所有结果，实时流式显示 AI 回复
-- **更好体验**：AI 回复逐字显示，对话更加自然流畅
-- **停止控制**：可以随时中止正在生成的回复
-- **智能备用**：自动检测流式支持，失败时自动降级到非流式模式
+## ✨ 特性
 
-### 🛠️ 技术优化
-- **Fetch API**：使用原生 Fetch API 处理 SSE 流式响应
-- **内存管理**：优化流式数据处理，避免内存泄漏
-- **错误处理**：完善的错误处理和重试机制
-- **状态管理**：实时连接状态监控和显示
+### 🎯 核心功能
+- **流式响应** - 基于 GraphQL 的实时流式对话体验
+- **智能问答** - 支持各种类型的问题和任务
+- **代码编程** - 代码生成、解释和调试
+- **创意写作** - 文章、故事、诗歌等创意内容生成
+- **学习指导** - 知识讲解和学习辅助
 
-### 🎨 UI/UX 改进
-- **流式指示器**：实时显示生成状态和进度
-- **停止按钮**：可视化的停止生成控制
-- **连接状态**：直观的连接状态指示器
-- **自然动画**：流畅的打字动画效果
+### 📋 合同审核 (NEW!)
+- **专业审核** - 基于 Mastra Agent 的智能合同审核
+- **合规检查** - 法律法规和行业标准合规性检查
+- **风险评估** - 识别潜在风险点和法律漏洞
+- **改进建议** - 提供具体的修改建议和解决方案
+- **文件支持** - 支持 PDF、Word、文本文件上传
 
-## 📦 功能特性
+### 🎨 界面特性
+- **现代化设计** - 豆包风格的美观界面
+- **响应式布局** - 适配各种设备屏幕
+- **流畅动画** - 精美的过渡动画和交互效果
+- **深色模式** - 支持浅色/深色主题切换
+- **Markdown 支持** - 完整的 Markdown 渲染和代码高亮
 
-### 原有功能
-- 🎯 **豆包风格设计** - 精美的UI界面和交互体验
-- 📝 **Markdown支持** - 完整的Markdown语法支持，包括代码高亮
-- 🔄 **GraphQL集成** - 支持GraphQL API调用
-- 💬 **智能对话** - 基于AI的智能对话功能
-- 🎨 **响应式设计** - 完美适配各种屏幕尺寸
-- ⚡ **高性能** - 基于React 18和TypeScript的现代化开发
-
-### 新增功能
-- 🌊 **流式响应** - 实时流式显示AI回复内容
-- ⏹️ **停止生成功能** - 支持中途停止AI内容生成
-- 🔄 **智能降级机制** - 流式失败时自动使用传统模式
-- 📊 **状态监控** - 实时显示连接和生成状态
-- 🎭 **自然动画** - 模拟真实打字的自然显示效果
-- 🛠️ **StreamingChatHandler** - 新的流式处理核心类
-- 🎯 **ChatModeSelector** - 模式选择演示组件
-- 📱 **响应式设计优化** - 更好的移动端体验
-
-## 🛠️ 技术栈
-
-- **前端框架**: React 18 + TypeScript
-- **状态管理**: React Hooks (useState, useRef, useEffect)
-- **样式方案**: Tailwind CSS
-- **图标系统**: Lucide React
-- **Markdown**: React Markdown + remark-gfm + rehype-highlight
-- **API通信**: 
-  - GraphQL (Apollo Client) - 传统模式
-  - Fetch API + SSE - 流式模式
-- **构建工具**: Vite
-- **代码质量**: ESLint + TypeScript
+### 🔧 技术特性
+- **TypeScript** - 完整的类型安全
+- **React 18** - 最新的 React 特性
+- **Vite** - 快速的开发和构建工具
+- **Tailwind CSS** - 原子化 CSS 框架
+- **GraphQL** - 高效的数据查询
+- **Mastra Client** - 专业的 AI Agent 集成
 
 ## 🚀 快速开始
 
-### 安装依赖
+### 环境要求
+- Node.js >= 18.0.0
+- npm >= 8.0.0 或 yarn >= 1.22.0
+
+### 安装
 
 ```bash
+# 克隆项目
+git clone https://github.com/juzhiqiang/xiao-bao-bao.git
+cd xiao-bao-bao
+
+# 安装依赖
 npm install
 # 或
 yarn install
 ```
 
-### 开发模式
+### 环境配置
+
+```bash
+# 复制环境变量模板
+cp .env.example .env
+
+# 编辑环境变量
+vim .env
+```
+
+必要的环境变量：
+```env
+# Mastra API 配置（用于合同审核功能）
+VITE_MASTRA_API_URL=http://localhost:4111
+
+# GraphQL API 配置
+VITE_GRAPHQL_ENDPOINT=https://ai-admin.juzhiqiang.shop
+```
+
+### 启动开发服务器
 
 ```bash
 npm run dev
@@ -73,7 +84,9 @@ npm run dev
 yarn dev
 ```
 
-### 构建项目
+访问 http://localhost:5173 查看应用。
+
+### 构建生产版本
 
 ```bash
 npm run build
@@ -81,212 +94,163 @@ npm run build
 yarn build
 ```
 
-### 部署到GitHub Pages
+## 📖 使用指南
+
+### 基本对话
+1. 在输入框中输入你的问题
+2. 按 Enter 发送消息
+3. 观察 AI 的实时流式响应
+
+### 合同审核功能
+1. 点击右上角的 "合同审核" 按钮
+2. 选择合同类型（可选）
+3. 粘贴合同文本或上传合同文件
+4. 获得专业的合规性分析报告
+
+详细使用说明请参考：[合同审核功能文档](./docs/CONTRACT_REVIEW.md)
+
+## 🏗️ 项目结构
+
+```
+src/
+├── components/
+│   ├── XiaoBaoBaoStreamingChat.tsx    # 主聊天组件
+│   ├── ContractReviewChat.tsx         # 合同审核组件
+│   └── index.ts                       # 组件导出
+├── lib/
+│   ├── streaming.ts                   # 流式响应处理
+│   ├── graphql.ts                     # GraphQL 相关
+│   └── mastraClient.ts                # Mastra 客户端
+├── App.tsx                            # 路由配置
+├── main.tsx                           # 应用入口
+└── index.css                          # 全局样式
+```
+
+## 🔌 API 集成
+
+### GraphQL API
+本项目支持 GraphQL 流式查询，提供实时的对话体验。
+
+### Mastra Agent API
+集成了专业的合同审核 Agent，基于以下技术栈：
+- [@mastra/client-js](https://www.npmjs.com/package/@mastra/client-js) - Mastra 客户端
+- [recodeAgent](https://github.com/juzhiqiang/recodeAgent) - 合同审核代理服务
+- DeepSeek AI - 底层语言模型
+
+## 🎨 自定义主题
+
+项目使用 Tailwind CSS，你可以轻松自定义主题：
+
+```javascript
+// tailwind.config.js
+module.exports = {
+  theme: {
+    extend: {
+      colors: {
+        primary: {
+          50: '#eff6ff',
+          500: '#3b82f6',
+          900: '#1e3a8a',
+        }
+      }
+    }
+  }
+}
+```
+
+## 📦 部署
+
+### GitHub Pages
 
 ```bash
 npm run deploy
-# 或
-yarn deploy
 ```
 
-## 📖 使用方法
+### Cloudflare Pages
 
-### 基础使用
-
-```tsx
-import { XiaoBaoBaoStreamingChat } from 'xiao-bao-bao';
-
-function App() {
-  return (
-    <div>
-      <XiaoBaoBaoStreamingChat />
-    </div>
-  );
-}
+```bash
+npm run build:cloudflare
 ```
 
-### 自定义配置
+然后将 `dist` 目录上传到 Cloudflare Pages。
 
-```tsx
-import { StreamingChatHandler } from 'xiao-bao-bao/lib/streaming';
+### Docker
 
-// 创建自定义配置的流式处理器
-const customHandler = new StreamingChatHandler({
-  endpoint: 'https://ai-admin.juzhiqiang.shop/v1/chat/completions',
-  model: 'your-model',
-  temperature: 0.7,
-  maxTokens: 2000
-});
+```dockerfile
+FROM node:18-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --only=production
+COPY . .
+RUN npm run build
+EXPOSE 3000
+CMD ["npm", "run", "preview"]
 ```
 
-## 🔧 配置选项
+## 🛠️ 开发
 
-### StreamingConfig
+### 开发命令
 
-```typescript
-interface StreamingConfig {
-  endpoint: string;      // API端点地址
-  apiKey?: string;       // API密钥(可选)
-  model?: string;        // 使用的模型
-  temperature?: number;  // 温度参数
-  maxTokens?: number;    // 最大token数
-  topP?: number;         // Top-p参数
-}
+```bash
+# 启动开发服务器
+npm run dev
+
+# 构建项目
+npm run build
+
+# 预览构建结果
+npm run preview
+
+# 代码检查
+npm run lint
+
+# 部署到 GitHub Pages
+npm run deploy
 ```
 
-### 默认配置
+### Git 工作流
 
-```typescript
-const DEFAULT_CONFIG = {
-  endpoint: 'https://ai-admin.juzhiqiang.shop/v1/chat/completions',
-  model: 'deepseek-chat',
-  temperature: 0.7,
-  maxTokens: 2000,
-  topP: 0.9
-};
-```
+1. 从 `main` 分支创建功能分支
+2. 在功能分支上开发新功能
+3. 提交 Pull Request
+4. 代码审查后合并到 `main`
 
-## 🎯 核心特性详解
+## 🤝 贡献
 
-### 1. 流式响应处理
-
-```typescript
-// 开始流式对话
-await streamingHandler.streamChat(
-  messages,
-  (chunk) => {
-    // 处理每个数据块
-    console.log('收到数据块:', chunk);
-  },
-  () => {
-    // 完成回调
-    console.log('生成完成');
-  },
-  (error) => {
-    // 错误处理
-    console.error('生成错误:', error);
-  }
-);
-```
-
-### 2. 智能备用机制
-
-```typescript
-// 检测流式支持
-const isSupported = await StreamingChatHandler.checkStreamingSupport(endpoint);
-
-if (isSupported) {
-  // 使用流式模式
-  await handler.streamChat(...);
-} else {
-  // 降级到传统模式
-  await handler.fallbackRequest(...);
-}
-```
-
-### 3. 自然打字效果
-
-```typescript
-// 模拟自然打字效果
-simulateNaturalTyping(
-  text,
-  (chunk) => updateUI(chunk),
-  () => onComplete(),
-  50 // 基础延迟
-);
-```
-
-## 🎨 UI组件说明
-
-### 主要组件
-
-1. **XiaoBaoBaoStreamingChat** - 新的流式聊天组件
-2. **XiaoBaoBaoChat** - 原版GraphQL聊天组件
-3. **StreamingChatHandler** - 流式响应处理器
-
-### 状态指示器
-
-- 🟢 绿色闪烁：流式API已连接
-- 🟡 黄色闪烁：正在连接中
-- 🔴 红色：连接失败
-
-### 交互控制
-
-- **发送按钮**：发送消息或停止生成
-- **重新生成**：重新生成AI回复
-- **复制按钮**：复制消息内容
-- **快捷操作**：预设的常用问题
-
-## 📊 性能优化
-
-### 内存管理
-- 使用 `AbortController` 控制请求生命周期
-- 及时释放 `ReadableStream` 资源
-- 优化大量文本的渲染性能
-
-### 网络优化
-- 智能重连机制
-- 断线重连和错误恢复
-- 支持请求取消和重试
-
-### 用户体验
-- 流畅的动画过渡
-- 实时状态反馈
-- 智能错误提示
-
-## 🐛 常见问题
-
-### Q: 流式响应不工作怎么办？
-A: 检查API端点是否支持SSE格式，组件会自动降级到传统模式。
-
-### Q: 如何自定义API端点？
-A: 修改 `StreamingChatHandler` 的配置或直接修改 `streaming.ts` 中的默认配置。
-
-### Q: 如何处理认证？
-A: 在 `StreamingConfig` 中设置 `apiKey` 参数。
-
-### Q: 支持哪些AI模型？
-A: 目前主要支持兼容OpenAI格式的API，可以通过配置使用其他兼容的API。
-
-## 🤝 贡献指南
+欢迎贡献代码！请遵循以下步骤：
 
 1. Fork 本仓库
-2. 创建特性分支 (`git checkout -b feature/streaming-response`)
-3. 提交更改 (`git commit -am 'Add streaming response feature'`)
-4. 推送到分支 (`git push origin feature/streaming-response`)
-5. 创建 Pull Request
+2. 创建你的特性分支 (`git checkout -b feature/AmazingFeature`)
+3. 提交你的修改 (`git commit -m 'Add some AmazingFeature'`)
+4. 推送到分支 (`git push origin feature/AmazingFeature`)
+5. 打开一个 Pull Request
 
-## 📄 更新日志
+### 贡献指南
 
-### v2.0.0 (2025-01-XX)
-- ✨ 新增流式响应支持
-- ⚡ 优化性能和用户体验
-- 🛠️ 改进错误处理机制
-- 🎨 更新UI设计和动画
-- 📚 完善文档和示例
-
-### v1.0.0 (2024-XX-XX)
-- 🎉 初始版本发布
-- 🤖 基础AI对话功能
-- 📝 Markdown支持
-- 🔄 GraphQL集成
+- 遵循现有的代码风格
+- 添加适当的注释
+- 更新相关文档
+- 添加或更新测试（如果适用）
 
 ## 📄 许可证
 
-MIT License - 详见 [LICENSE](LICENSE) 文件
-
-## 🔗 相关链接
-
-- [在线演示](https://juzhiqiang.github.io/xiao-bao-bao)
-- [GitHub仓库](https://github.com/juzhiqiang/xiao-bao-bao)
-- [API接口文档](https://ai-admin.juzhiqiang.shop)
-- [React文档](https://react.dev/)
-- [TypeScript文档](https://www.typescriptlang.org/)
+本项目基于 MIT 许可证开源 - 查看 [LICENSE](LICENSE) 文件了解详情。
 
 ## 🙏 致谢
 
-感谢所有为这个项目做出贡献的开发者和用户！
+- [React](https://reactjs.org/) - UI 框架
+- [Vite](https://vitejs.dev/) - 构建工具
+- [Tailwind CSS](https://tailwindcss.com/) - CSS 框架
+- [Lucide React](https://lucide.dev/) - 图标库
+- [Mastra](https://mastra.ai/) - AI Agent 框架
+- [DeepSeek](https://www.deepseek.com/) - AI 模型服务
+
+## 📞 联系
+
+- 项目链接: [https://github.com/juzhiqiang/xiao-bao-bao](https://github.com/juzhiqiang/xiao-bao-bao)
+- 在线演示: [https://juzhiqiang.github.io/xiao-bao-bao](https://juzhiqiang.github.io/xiao-bao-bao)
+- 问题反馈: [Issues](https://github.com/juzhiqiang/xiao-bao-bao/issues)
 
 ---
 
-**享受流畅的AI对话体验！** 🚀✨
+⭐ 如果这个项目对你有帮助，请给它一个星标！
