@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, User, Bot, Sparkles, Copy, RefreshCw, AlertCircle, Square } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Send, User, Bot, Sparkles, Copy, RefreshCw, AlertCircle, Square, FileCheck } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
@@ -21,10 +22,11 @@ interface QuickAction {
 }
 
 const XiaoBaoBaoStreamingChat = () => {
+  const navigate = useNavigate();
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      content: '你好！我是小包包 🎯\n\n我现在支持 **GraphQL 流式响应**，可以实时显示回复内容，让对话更加流畅自然！\n\n我可以为你提供：\n\n• **智能问答** - 实时回答各种问题\n• **代码编程** - 流式生成和解释代码\n• **创意写作** - 逐步展示创作过程\n• **学习指导** - 渐进式知识讲解\n• **技术支持** - 实时技术答疑\n\n支持的格式包括：\n- 代码高亮 `console.log("Hello World")`\n- **粗体** 和 *斜体* 文字\n- 列表和表格\n- 链接和引用\n\n现在开始流式对话体验吧！✨',
+      content: '你好！我是小包包 🎯\n\n我现在支持 **GraphQL 流式响应**，可以实时显示回复内容，让对话更加流畅自然！\n\n我可以为你提供：\n\n• **智能问答** - 实时回答各种问题\n• **代码编程** - 流式生成和解释代码\n• **创意写作** - 逐步展示创作过程\n• **学习指导** - 渐进式知识讲解\n• **技术支持** - 实时技术答疑\n• **合同审核** - 专业的合同合规性分析\n\n支持的格式包括：\n- 代码高亮 `console.log("Hello World")`\n- **粗体** 和 *斜体* 文字\n- 列表和表格\n- 链接和引用\n\n现在开始流式对话体验吧！✨',
       sender: 'ai',
       timestamp: new Date()
     }
@@ -46,6 +48,7 @@ const XiaoBaoBaoStreamingChat = () => {
     { id: '2', text: '解释什么是React Hooks', icon: '⚛️' },
     { id: '3', text: '创建一个Markdown表格示例', icon: '📊' },
     { id: '4', text: '用代码实现斐波那契数列', icon: '🔢' },
+    { id: '5', text: '帮我审核一份合同', icon: '📋' },
   ];
 
   const scrollToBottom = useCallback(() => {
@@ -294,7 +297,11 @@ const XiaoBaoBaoStreamingChat = () => {
 
   const handleQuickAction = (action: QuickAction) => {
     if (!isStreaming) {
-      handleSendMessage(action.text);
+      if (action.text === '帮我审核一份合同') {
+        navigate('/contract-review');
+      } else {
+        handleSendMessage(action.text);
+      }
     }
   };
 
@@ -466,7 +473,7 @@ const XiaoBaoBaoStreamingChat = () => {
   return (
     <div className="flex flex-col h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50">
       {/* Header */}
-      <div className="flex items-center justify-center py-4 px-6 bg-white/90 backdrop-blur-md border-b border-slate-200/60 shadow-sm">
+      <div className="flex items-center justify-between py-4 px-6 bg-white/90 backdrop-blur-md border-b border-slate-200/60 shadow-sm">
         <div className="flex items-center gap-3">
           <div className="relative">
             <div className="w-11 h-11 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-2xl flex items-center justify-center shadow-lg">
@@ -484,6 +491,19 @@ const XiaoBaoBaoStreamingChat = () => {
               {isStreaming ? '正在流式回复中...' : getConnectionStatusText()}
             </p>
           </div>
+        </div>
+
+        {/* Contract Review Button */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => navigate('/contract-review')}
+            disabled={isStreaming}
+            className="flex items-center gap-2 px-4 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl transition-colors disabled:opacity-50 group"
+            title="进入合同审核模式"
+          >
+            <FileCheck className="w-4 h-4 group-hover:scale-110 transition-transform" />
+            <span className="text-sm font-medium">合同审核</span>
+          </button>
         </div>
       </div>
 
@@ -631,11 +651,19 @@ const XiaoBaoBaoStreamingChat = () => {
               <button
                 key={action.id}
                 onClick={() => handleQuickAction(action)}
-                className="flex items-center gap-3 p-4 bg-white border border-slate-200 hover:border-indigo-300 rounded-2xl transition-all duration-200 hover:shadow-md group"
+                className={`flex items-center gap-3 p-4 bg-white border border-slate-200 rounded-2xl transition-all duration-200 hover:shadow-md group ${
+                  action.text === '帮我审核一份合同' 
+                    ? 'hover:border-emerald-300 hover:bg-emerald-50' 
+                    : 'hover:border-indigo-300'
+                }`}
                 disabled={isStreaming}
               >
                 <span className="text-lg">{action.icon}</span>
-                <span className="text-sm text-slate-600 group-hover:text-indigo-600 font-medium">
+                <span className={`text-sm font-medium ${
+                  action.text === '帮我审核一份合同'
+                    ? 'text-slate-600 group-hover:text-emerald-600'
+                    : 'text-slate-600 group-hover:text-indigo-600'
+                }`}>
                   {action.text}
                 </span>
               </button>
