@@ -3,21 +3,10 @@ import react from '@vitejs/plugin-react'
 
 // https://vitejs.dev/config/
 export default defineConfig(({ command, mode }) => {
-  // 使用环境变量明确控制base路径
-  // VITE_DEPLOYMENT_TARGET: 'github' | 'cloudflare' | undefined
-  const deploymentTarget = process.env.VITE_DEPLOYMENT_TARGET;
-  
-  let base = '/';
-  
-  if (deploymentTarget === 'github' || (mode === 'production' && !deploymentTarget)) {
-    // 默认生产环境使用GitHub Pages配置
-    base = '/xiao-bao-bao/';
-  } else if (deploymentTarget === 'cloudflare') {
-    // 明确指定Cloudflare使用根路径
-    base = '/';
-  }
+  // GitHub Pages配置 - 默认构建目标
+  const base = '/xiao-bao-bao/';
 
-  console.log(`Building with mode: ${mode}, deployment: ${deploymentTarget || 'default'}, base: ${base}`);
+  console.log(`Building with mode: ${mode}, base: ${base} (GitHub Pages)`);
 
   return {
     plugins: [react()],
