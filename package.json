@@ -7,8 +7,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "build:cloudflare": "tsc && cross-env VITE_DEPLOYMENT_TARGET=cloudflare vite build --config vite.config.cloudflare.ts",
-    "build:github": "tsc && cross-env VITE_DEPLOYMENT_TARGET=github vite build",
+    "build:cloudflare": "tsc && vite build --config vite.config.cloudflare.ts",
+    "build:github": "tsc && vite build",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
     "preview:cloudflare": "vite preview --config vite.config.cloudflare.ts",
@@ -54,7 +54,6 @@
     "@typescript-eslint/parser": "^6.0.0",
     "@vitejs/plugin-react": "^4.0.3",
     "autoprefixer": "^10.4.14",
-    "cross-env": "^7.0.3",
     "eslint": "^8.45.0",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.3",
