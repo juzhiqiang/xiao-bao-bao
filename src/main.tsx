@@ -14,26 +14,31 @@ if (!rootElement) {
 }
 
 // 检测部署环境并设置basename
-// 方法：检查页面URL来确定当前部署平台
 function getBasename(): string {
   const hostname = window.location.hostname;
   const pathname = window.location.pathname;
   
-  console.log('Current hostname:', hostname, 'pathname:', pathname);
+  console.log('Detection - hostname:', hostname, 'pathname:', pathname);
   
-  // GitHub Pages 检测
-  if (hostname === 'juzhiqiang.github.io' || pathname.startsWith('/xiao-bao-bao/')) {
-    console.log('Detected GitHub Pages deployment');
+  // 更精确的GitHub Pages检测
+  if (hostname === 'juzhiqiang.github.io') {
+    console.log('✅ Detected GitHub Pages deployment');
     return '/xiao-bao-bao';
   }
   
-  // Cloudflare Pages 或其他自定义域名
-  console.log('Detected Cloudflare Pages or custom domain deployment');
+  // 如果pathname已经包含/xiao-bao-bao/，说明是GitHub Pages
+  if (pathname.startsWith('/xiao-bao-bao/')) {
+    console.log('✅ Detected GitHub Pages deployment (via pathname)');
+    return '/xiao-bao-bao';
+  }
+  
+  // 所有其他情况（包括自定义域名、Cloudflare Pages等）
+  console.log('✅ Detected Custom Domain/Cloudflare Pages deployment');
   return '/';
 }
 
 const basename = getBasename();
-console.log('Using basename:', basename);
+console.log('🎯 Final basename:', basename);
 
 createRoot(rootElement).render(
   <StrictMode>
