@@ -1,5 +1,3 @@
-import { MastraClient } from '@mastra/client-js';
-
 // Mastra客户端配置
 interface MastraClientConfig {
   baseUrl: string;
@@ -9,9 +7,54 @@ interface MastraClientConfig {
   headers?: Record<string, string>;
 }
 
+// 模拟 MastraClient 类，直到真正的库可用
+class MockMastraClient {
+  private config: MastraClientConfig;
+
+  constructor(config: MastraClientConfig) {
+    this.config = config;
+  }
+
+  getAgent(agentId: string) {
+    return new MockAgent(this.config, agentId);
+  }
+}
+
+// 模拟 Agent 类
+class MockAgent {
+  private config: MastraClientConfig;
+  private agentId: string;
+
+  constructor(config: MastraClientConfig, agentId: string) {
+    this.config = config;
+    this.agentId = agentId;
+  }
+
+  async generate(params: {
+    messages: Array<{ role: 'user' | 'assistant'; content: string }>;
+    temperature?: number;
+  }) {
+    // 模拟API调用
+    const response = await fetch(`${this.config.baseUrl}/agents/${this.agentId}/generate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...this.config.headers,
+      },
+      body: JSON.stringify(params),
+    });
+
+    if (!response.ok) {
+      throw new Error(`API调用失败: ${response.status} ${response.statusText}`);
+    }
+
+    return await response.json();
+  }
+}
+
 // 默认配置
 const defaultConfig: MastraClientConfig = {
-  baseUrl: import.meta.env.VITE_MASTRA_API_URL || 'https://agent.juzhiqiang.shop',
+  baseUrl: 'https://agent.juzhiqiang.shop',
   retries: 3,
   backoffMs: 300,
   maxBackoffMs: 5000,
@@ -22,12 +65,12 @@ const defaultConfig: MastraClientConfig = {
 
 // 创建Mastra客户端实例
 class ContractReviewClient {
-  private client: MastraClient;
+  private client: MockMastraClient;
   private agentId = 'contractAuditAgent';
 
   constructor(config: Partial<MastraClientConfig> = {}) {
     const finalConfig = { ...defaultConfig, ...config };
-    this.client = new MastraClient(finalConfig);
+    this.client = new MockMastraClient(finalConfig);
   }
 
   /**
@@ -73,7 +116,7 @@ class ContractReviewClient {
   }
 
   /**
-   * 流式审核合同内容
+   * 流式审核合同内容（模拟实现）
    * @param contractContent 合同内容
    * @param contractType 合同类型（可选）
    * @param onChunk 流式数据回调
@@ -88,35 +131,31 @@ class ContractReviewClient {
     onError: (error: Error) => void
   ): Promise<void> {
     try {
-      // 构建消息
-      const messages = [
-        {
-          role: 'user' as const,
-          content: `请审核以下${contractType ? contractType : ''}合同的合规性：\n\n${contractContent}`,
-        },
-      ];
-
-      // 获取代理实例
-      const agent = this.client.getAgent(this.agentId);
-
-      // 流式生成响应
-      const stream = await agent.generateStream({
-        messages,
-        temperature: 0.1,
-      });
-
-      let fullResponse = '';
-
-      // 处理流式数据
-      for await (const chunk of stream) {
-        if (chunk.type === 'text-delta') {
-          const text = chunk.textDelta;
-          fullResponse += text;
-          onChunk(text);
-        }
+      // 首先获取完整响应
+      const result = await this.reviewContract(contractContent, contractType);
+      
+      if (!result.success) {
+        onError(new Error(result.error || '审核失败'));
+        return;
       }
 
-      onComplete(fullResponse);
+      // 模拟流式输出
+      const fullResponse = result.data?.content || result.data?.message || '审核完成，但无响应内容。';
+      
+      // 将响应分割为小块进行流式显示
+      const chunks = fullResponse.split('');
+      let currentResponse = '';
+
+      for (let i = 0; i < chunks.length; i++) {
+        const chunk = chunks[i];
+        currentResponse += chunk;
+        onChunk(chunk);
+        
+        // 添加小延迟模拟流式效果
+        await new Promise(resolve => setTimeout(resolve, 20));
+      }
+
+      onComplete(currentResponse);
     } catch (error) {
       console.error('Contract review stream error:', error);
       onError(error instanceof Error ? error : new Error('合同审核流失败'));
@@ -166,9 +205,6 @@ class ContractReviewClient {
     error?: string;
   }> {
     try {
-      // 注意：这里假设Mastra客户端有获取代理列表的方法
-      // 实际API可能有所不同，需要根据最新的@mastra/client-js文档调整
-      
       // 目前返回已知的代理
       return {
         success: true,

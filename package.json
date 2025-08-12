@@ -28,8 +28,7 @@
     "realtime",
     "流式响应",
     "contract",
-    "review",
-    "mastra"
+    "review"
   ],
   "author": "juzhiqiang",
   "license": "MIT",
@@ -43,8 +42,7 @@
     "rehype-highlight": "^7.0.0",
     "@apollo/client": "^3.8.7",
     "graphql": "^16.8.1",
-    "graphql-tag": "^2.12.6",
-    "@mastra/client-js": "^0.10.20"
+    "graphql-tag": "^2.12.6"
   },
   "devDependencies": {
     "@types/react": "^18.2.15",
