@@ -1,247 +1,256 @@
-# 🤖 小包包 - 豆包风格的AI对话框组件
+# 小包包 (XiaoBaoBao)
 
-> React + TypeScript + 流式响应 + 合同审核功能
+🤖 豆包风格的AI对话框组件 (React + TypeScript) 支持流式响应与合同审核
 
 [![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](https://choosealicense.com/licenses/mit/)
+[![Version](https://img.shields.io/badge/version-2.0.0-blue.svg)](https://github.com/juzhiqiang/xiao-bao-bao)
 [![React](https://img.shields.io/badge/React-18.2.0-blue.svg)](https://reactjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0.2-blue.svg)](https://www.typescriptlang.org/)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.3.0-blue.svg)](https://tailwindcss.com/)
-
-一个现代化的AI对话界面组件，支持流式响应和专业的合同审核功能。基于豆包的设计风格，提供流畅的用户体验。
 
 ## ✨ 特性
 
 ### 🎯 核心功能
-- **流式响应** - 实时显示AI回复内容
-- **GraphQL集成** - 支持DeepSeek GraphQL API
-- **合同审核** - 专业的合同合规性分析
-- **Markdown支持** - 完整的markdown渲染和代码高亮
-- **响应式设计** - 适配各种屏幕尺寸
-- **现代UI** - 基于Tailwind CSS的精美界面
+- **流式响应** - 基于 GraphQL 的实时流式对话体验
+- **智能问答** - 支持各种类型的问题和任务
+- **代码编程** - 代码生成、解释和调试
+- **创意写作** - 文章、故事、诗歌等创意内容生成
+- **学习指导** - 知识讲解和学习辅助
 
-### 📋 合同审核功能 (NEW!)
-- **多格式支持** - 支持文本、PDF、Word文档上传
-- **专业分析** - 基于Mastra Agent的智能合规性检查
-- **风险评估** - 识别潜在的法律风险点
-- **实时建议** - 提供具体的改进建议
-- **流式审核** - 实时显示审核进度和结果
+### 📋 合同审核 (NEW!)
+- **专业审核** - 基于 Mastra Agent 的智能合同审核
+- **合规检查** - 法律法规和行业标准合规性检查
+- **风险评估** - 识别潜在风险点和法律漏洞
+- **改进建议** - 提供具体的修改建议和解决方案
+- **文件支持** - 支持 PDF、Word、文本文件上传
 
-### 🛡️ 审核重点领域
-- 数据安全与隐私保护
-- 知识产权保护
-- 服务等级协议(SLA)
-- 责任限制与赔偿
-- 技术规范要求
-- 用户体验标准
+### 🎨 界面特性
+- **现代化设计** - 豆包风格的美观界面
+- **响应式布局** - 适配各种设备屏幕
+- **流畅动画** - 精美的过渡动画和交互效果
+- **深色模式** - 支持浅色/深色主题切换
+- **Markdown 支持** - 完整的 Markdown 渲染和代码高亮
+
+### 🔧 技术特性
+- **TypeScript** - 完整的类型安全
+- **React 18** - 最新的 React 特性
+- **Vite** - 快速的开发和构建工具
+- **Tailwind CSS** - 原子化 CSS 框架
+- **GraphQL** - 高效的数据查询
+- **Mastra Client** - 专业的 AI Agent 集成
 
 ## 🚀 快速开始
 
 ### 环境要求
 - Node.js >= 18.0.0
-- npm >= 8.0.0
+- npm >= 8.0.0 或 yarn >= 1.22.0
 
-### 安装依赖
+### 安装
 
 ```bash
+# 克隆项目
+git clone https://github.com/juzhiqiang/xiao-bao-bao.git
+cd xiao-bao-bao
+
+# 安装依赖
 npm install
+# 或
+yarn install
 ```
 
 ### 环境配置
 
-1. 复制环境变量配置文件：
 ```bash
+# 复制环境变量模板
 cp .env.example .env
+
+# 编辑环境变量
+vim .env
 ```
 
-2. 配置环境变量：
+必要的环境变量：
 ```env
-# Mastra API Configuration
+# Mastra API 配置（用于合同审核功能）
 VITE_MASTRA_API_URL=http://localhost:4111
 
-# DeepSeek API Configuration
-DEEPSEEK_API_KEY=your_deepseek_api_key_here
-
-# GraphQL API Configuration
+# GraphQL API 配置
 VITE_GRAPHQL_ENDPOINT=https://ai-admin.juzhiqiang.shop
-```
-
-### 启动Mastra服务
-
-在使用合同审核功能前，需要启动Mastra服务：
-
-```bash
-# 克隆recodeAgent项目
-git clone https://github.com/juzhiqiang/recodeAgent.git
-cd recodeAgent
-
-# 安装依赖
-npm install
-
-# 配置环境变量
-echo "DEEPSEEK_API_KEY=your_deepseek_api_key_here" > .env
-
-# 启动Mastra开发服务器
-npm run dev
 ```
 
 ### 启动开发服务器
 
 ```bash
 npm run dev
+# 或
+yarn dev
 ```
 
-访问 `http://localhost:5173` 查看应用。
+访问 http://localhost:5173 查看应用。
+
+### 构建生产版本
+
+```bash
+npm run build
+# 或
+yarn build
+```
 
 ## 📖 使用指南
 
-### 基础对话
-1. 在主页面输入问题
-2. 查看AI实时流式回复
-3. 支持代码高亮、表格等Markdown格式
+### 基本对话
+1. 在输入框中输入你的问题
+2. 按 Enter 发送消息
+3. 观察 AI 的实时流式响应
 
-### 合同审核
-1. 点击右上角"合同审核"按钮
-2. 选择审核方式：
-   - 直接粘贴合同文本
-   - 上传合同文件(.txt, .pdf, .doc, .docx)
-3. 选择合同类型（可选）
-4. 获取专业的合规性分析报告
+### 合同审核功能
+1. 点击右上角的 "合同审核" 按钮
+2. 选择合同类型（可选）
+3. 粘贴合同文本或上传合同文件
+4. 获得专业的合规性分析报告
 
-### 快速操作
-- 使用首页的快速操作按钮
-- 支持代码生成、技术解释等场景
-- 一键进入合同审核模式
+详细使用说明请参考：[合同审核功能文档](./docs/CONTRACT_REVIEW.md)
 
 ## 🏗️ 项目结构
 
 ```
 src/
 ├── components/
-│   ├── XiaoBaoBaoStreamingChat.tsx    # 主对话界面
-│   ├── ContractReviewChat.tsx         # 合同审核界面
+│   ├── XiaoBaoBaoStreamingChat.tsx    # 主聊天组件
+│   ├── ContractReviewChat.tsx         # 合同审核组件
 │   └── index.ts                       # 组件导出
 ├── lib/
 │   ├── streaming.ts                   # 流式响应处理
-│   ├── graphql.ts                     # GraphQL相关
-│   └── mastraClient.ts                # Mastra客户端 (NEW!)
+│   ├── graphql.ts                     # GraphQL 相关
+│   └── mastraClient.ts                # Mastra 客户端
 ├── App.tsx                            # 路由配置
-└── main.tsx                          # 应用入口
+├── main.tsx                           # 应用入口
+└── index.css                          # 全局样式
 ```
 
-## 🔧 技术栈
+## 🔌 API 集成
 
-### 前端框架
-- **React 18** - 现代化React框架
-- **TypeScript** - 类型安全
-- **Vite** - 快速构建工具
-- **React Router** - 客户端路由
+### GraphQL API
+本项目支持 GraphQL 流式查询，提供实时的对话体验。
 
-### UI & 样式
-- **Tailwind CSS** - 原子化CSS框架
-- **Lucide React** - 现代图标库
-- **React Markdown** - Markdown渲染
-- **Rehype Highlight** - 代码语法高亮
+### Mastra Agent API
+集成了专业的合同审核 Agent，基于以下技术栈：
+- [@mastra/client-js](https://www.npmjs.com/package/@mastra/client-js) - Mastra 客户端
+- [recodeAgent](https://github.com/juzhiqiang/recodeAgent) - 合同审核代理服务
+- DeepSeek AI - 底层语言模型
 
-### AI集成
-- **GraphQL** - DeepSeek API集成
-- **Mastra Client** - 合同审核Agent客户端
-- **Apollo Client** - GraphQL客户端
+## 🎨 自定义主题
 
-## 📊 API集成
+项目使用 Tailwind CSS，你可以轻松自定义主题：
 
-### DeepSeek GraphQL API
-```typescript
-const GRAPHQL_ENDPOINT = 'https://ai-admin.juzhiqiang.shop';
+```javascript
+// tailwind.config.js
+module.exports = {
+  theme: {
+    extend: {
+      colors: {
+        primary: {
+          50: '#eff6ff',
+          500: '#3b82f6',
+          900: '#1e3a8a',
+        }
+      }
+    }
+  }
+}
 ```
 
-### Mastra Contract Review Agent
-```typescript
-import { contractReviewClient } from './lib/mastraClient';
+## 📦 部署
 
-// 审核合同
-const result = await contractReviewClient.reviewContract(
-  contractContent,
-  contractType
-);
+### GitHub Pages
 
-// 流式审核
-await contractReviewClient.reviewContractStream(
-  contractContent,
-  contractType,
-  onChunk,
-  onComplete,
-  onError
-);
-```
-
-## 🚢 部署
-
-### 构建生产版本
-```bash
-npm run build
-```
-
-### GitHub Pages部署
 ```bash
 npm run deploy
 ```
 
-### Cloudflare Workers部署
+### Cloudflare Pages
+
 ```bash
 npm run build:cloudflare
 ```
 
-## 🔒 环境变量
+然后将 `dist` 目录上传到 Cloudflare Pages。
 
-| 变量名 | 描述 | 默认值 |
-|--------|------|--------|
-| `VITE_MASTRA_API_URL` | Mastra API地址 | `http://localhost:4111` |
-| `DEEPSEEK_API_KEY` | DeepSeek API密钥 | - |
-| `VITE_GRAPHQL_ENDPOINT` | GraphQL端点 | `https://ai-admin.juzhiqiang.shop` |
+### Docker
+
+```dockerfile
+FROM node:18-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --only=production
+COPY . .
+RUN npm run build
+EXPOSE 3000
+CMD ["npm", "run", "preview"]
+```
+
+## 🛠️ 开发
+
+### 开发命令
+
+```bash
+# 启动开发服务器
+npm run dev
+
+# 构建项目
+npm run build
+
+# 预览构建结果
+npm run preview
+
+# 代码检查
+npm run lint
+
+# 部署到 GitHub Pages
+npm run deploy
+```
+
+### Git 工作流
+
+1. 从 `main` 分支创建功能分支
+2. 在功能分支上开发新功能
+3. 提交 Pull Request
+4. 代码审查后合并到 `main`
 
 ## 🤝 贡献
 
-欢迎提交 Issues 和 Pull Requests！
+欢迎贡献代码！请遵循以下步骤：
 
-1. Fork 项目
-2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
+1. Fork 本仓库
+2. 创建你的特性分支 (`git checkout -b feature/AmazingFeature`)
+3. 提交你的修改 (`git commit -m 'Add some AmazingFeature'`)
 4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 开启 Pull Request
+5. 打开一个 Pull Request
 
-## 📝 更新日志
+### 贡献指南
 
-### v2.0.0 (2025-08-12)
-- 🎉 新增合同审核功能
-- 🔗 集成Mastra Agent客户端
-- 📁 支持多种文件格式上传
-- 🛡️ 专业合规性分析
-- 🎨 全新合同审核界面
-- ⚡ 流式合同审核体验
-- 🧭 添加路由导航系统
-
-### v1.x.x
-- GraphQL流式响应
-- Markdown渲染支持
-- 代码语法高亮
-- 响应式界面设计
+- 遵循现有的代码风格
+- 添加适当的注释
+- 更新相关文档
+- 添加或更新测试（如果适用）
 
 ## 📄 许可证
 
-基于 [MIT](https://choosealicense.com/licenses/mit/) 许可证开源。
-
-## 👥 作者
-
-**juzhiqiang** - [GitHub](https://github.com/juzhiqiang)
+本项目基于 MIT 许可证开源 - 查看 [LICENSE](LICENSE) 文件了解详情。
 
 ## 🙏 致谢
 
-- [React](https://reactjs.org/) - 前端框架
-- [Tailwind CSS](https://tailwindcss.com/) - CSS框架
-- [Mastra](https://github.com/mastra-ai/mastra) - AI Agent框架
-- [DeepSeek](https://www.deepseek.com/) - AI模型服务
+- [React](https://reactjs.org/) - UI 框架
 - [Vite](https://vitejs.dev/) - 构建工具
+- [Tailwind CSS](https://tailwindcss.com/) - CSS 框架
+- [Lucide React](https://lucide.dev/) - 图标库
+- [Mastra](https://mastra.ai/) - AI Agent 框架
+- [DeepSeek](https://www.deepseek.com/) - AI 模型服务
+
+## 📞 联系
+
+- 项目链接: [https://github.com/juzhiqiang/xiao-bao-bao](https://github.com/juzhiqiang/xiao-bao-bao)
+- 在线演示: [https://juzhiqiang.github.io/xiao-bao-bao](https://juzhiqiang.github.io/xiao-bao-bao)
+- 问题反馈: [Issues](https://github.com/juzhiqiang/xiao-bao-bao/issues)
 
 ---
 
-<p align="center">Made with ❤️ by <a href="https://github.com/juzhiqiang">juzhiqiang</a></p>
+⭐ 如果这个项目对你有帮助，请给它一个星标！
