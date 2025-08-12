@@ -1,5 +1,6 @@
 // 流式响应处理模块 - 基于 DeepSeek GraphQL API
 import { ChatMessage } from './graphql';
+import { appConfig } from './config';
 
 // 流式响应配置
 export interface StreamingConfig {
@@ -12,10 +13,10 @@ export interface StreamingConfig {
   topP?: number;
 }
 
-// 默认配置
+// 默认配置 - 使用应用配置
 const DEFAULT_CONFIG: StreamingConfig = {
-  endpoint: 'https://ai-admin.juzhiqiang.shop',
-  streamEndpoint: 'https://ai-admin.juzhiqiang.shop/stream',
+  endpoint: appConfig.graphqlEndpoint,
+  streamEndpoint: appConfig.streamEndpoint,
   model: 'deepseek-chat',
   temperature: 0.7,
   maxTokens: 2000,
