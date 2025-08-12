@@ -54,7 +54,7 @@ class ErrorBoundary extends Component<Props, State> {
                 小包包在加载过程中遇到了技术问题，这可能是由于网络连接或配置问题导致的。
               </p>
 
-              {process.env.NODE_ENV === 'development' && this.state.error && (
+              {import.meta.env.DEV && this.state.error && (
                 <div className="text-left bg-red-50 rounded-xl p-4 mb-6 text-xs">
                   <p className="font-medium text-red-800 mb-2">错误详情：</p>
                   <p className="text-red-600 font-mono break-all">
