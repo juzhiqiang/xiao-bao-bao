@@ -7,26 +7,29 @@ import ErrorBoundary from './components/ErrorBoundary.tsx'
 import apolloClient from './lib/apollo.ts'
 import './index.css'
 
-// 动态确定basename
-// GitHub Pages: /xiao-bao-bao/
-// Cloudflare Pages: /
-function getBasename(): string {
-  // 检查当前URL路径来判断部署环境
-  const currentPath = window.location.pathname;
-  
-  // 如果路径包含 /xiao-bao-bao/，说明是GitHub Pages
-  if (currentPath.startsWith('/xiao-bao-bao/')) {
-    return '/xiao-bao-bao';
-  }
-  
-  // 否则使用根路径（Cloudflare Pages或本地开发）
-  return '/';
-}
-
 // 确保root元素存在
 const rootElement = document.getElementById('root');
 if (!rootElement) {
   throw new Error('Root element not found');
+}
+
+// 检测部署环境并设置basename
+// 方法：检查页面URL来确定当前部署平台
+function getBasename(): string {
+  const hostname = window.location.hostname;
+  const pathname = window.location.pathname;
+  
+  console.log('Current hostname:', hostname, 'pathname:', pathname);
+  
+  // GitHub Pages 检测
+  if (hostname === 'juzhiqiang.github.io' || pathname.startsWith('/xiao-bao-bao/')) {
+    console.log('Detected GitHub Pages deployment');
+    return '/xiao-bao-bao';
+  }
+  
+  // Cloudflare Pages 或其他自定义域名
+  console.log('Detected Cloudflare Pages or custom domain deployment');
+  return '/';
 }
 
 const basename = getBasename();
