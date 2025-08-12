@@ -13,32 +13,18 @@ if (!rootElement) {
   throw new Error('Root element not found');
 }
 
-// 检测部署环境并设置basename
+// 简化的basename检测
 function getBasename(): string {
-  const hostname = window.location.hostname;
-  const pathname = window.location.pathname;
-  
-  console.log('Detection - hostname:', hostname, 'pathname:', pathname);
-  
-  // 更精确的GitHub Pages检测
-  if (hostname === 'juzhiqiang.github.io') {
-    console.log('✅ Detected GitHub Pages deployment');
+  // 如果是GitHub Pages域名或路径包含仓库名，使用GitHub配置
+  if (window.location.hostname === 'juzhiqiang.github.io' || 
+      window.location.pathname.startsWith('/xiao-bao-bao/')) {
     return '/xiao-bao-bao';
   }
-  
-  // 如果pathname已经包含/xiao-bao-bao/，说明是GitHub Pages
-  if (pathname.startsWith('/xiao-bao-bao/')) {
-    console.log('✅ Detected GitHub Pages deployment (via pathname)');
-    return '/xiao-bao-bao';
-  }
-  
-  // 所有其他情况（包括自定义域名、Cloudflare Pages等）
-  console.log('✅ Detected Custom Domain/Cloudflare Pages deployment');
+  // 其他情况使用根路径
   return '/';
 }
 
 const basename = getBasename();
-console.log('🎯 Final basename:', basename);
 
 createRoot(rootElement).render(
   <StrictMode>
