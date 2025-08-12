@@ -138,11 +138,11 @@ export class StreamingChatHandler {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const reader = response.body?.getReader();
-      if (!reader) {
-        throw new Error('无法获取响应流');
+      if (!response.body) {
+        throw new Error('响应体为空');
       }
 
+      const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
 
@@ -172,7 +172,7 @@ export class StreamingChatHandler {
               const dataStr = trimmed.slice(6); // 移除 'data: ' 前缀
               
               // 处理完成信号
-              if (dataStr === '{"type":"complete"}') {
+              if (dataStr === '{"type":"complete"}' || dataStr === '[DONE]') {
                 onComplete();
                 return;
               }
@@ -257,7 +257,7 @@ export class StreamingChatHandler {
       
       // 处理 GraphQL 错误
       if (result.errors) {
-        throw new Error(result.errors[0]?.message || '未知错误');
+        throw new Error(result.errors[0]?.message || 'GraphQL错误');
       }
 
       const content = result.data?.chat?.choices?.[0]?.message?.content;
@@ -286,6 +286,9 @@ export class StreamingChatHandler {
   // 检查是否支持流式响应
   public static async checkStreamingSupport(endpoint: string): Promise<boolean> {
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
@@ -293,16 +296,20 @@ export class StreamingChatHandler {
         },
         body: JSON.stringify({
           query: MODELS_QUERY
-        })
+        }),
+        signal: controller.signal
       });
       
+      clearTimeout(timeoutId);
+
       if (!response.ok) {
         return false;
       }
 
       const result = await response.json();
       return !result.errors && result.data?.models;
-    } catch {
+    } catch (error) {
+      console.warn('流式支持检查失败:', error);
       return false;
     }
   }
@@ -310,6 +317,9 @@ export class StreamingChatHandler {
   // 获取可用模型
   public async getModels(): Promise<any[]> {
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+
       const response = await fetch(this.config.endpoint, {
         method: 'POST',
         headers: {
@@ -318,8 +328,11 @@ export class StreamingChatHandler {
         },
         body: JSON.stringify({
           query: MODELS_QUERY
-        })
+        }),
+        signal: controller.signal
       });
+
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -328,7 +341,7 @@ export class StreamingChatHandler {
       const result = await response.json();
       
       if (result.errors) {
-        throw new Error(result.errors[0]?.message || '未知错误');
+        throw new Error(result.errors[0]?.message || 'GraphQL错误');
       }
 
       return result.data?.models || [];
