@@ -4,7 +4,7 @@ import react from '@vitejs/plugin-react'
 // https://vitejs.dev/config/
 export default defineConfig(({ command, mode }) => {
   // GitHub Pages配置 - 默认构建目标
-  const base = '/xiao-bao-bao/';
+  const base = './';
 
   console.log(`Building with mode: ${mode}, base: ${base} (GitHub Pages)`);
 
