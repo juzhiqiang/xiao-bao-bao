@@ -2,6 +2,7 @@ import { ApolloClient, InMemoryCache, createHttpLink, from } from '@apollo/clien
 import { setContext } from '@apollo/client/link/context';
 import { onError } from '@apollo/client/link/error';
 import { appConfig } from './config';
+import { GET_MODELS } from './graphql';
 
 // GraphQL API 端点 - 使用配置系统
 const httpLink = createHttpLink({
@@ -90,7 +91,7 @@ export const apolloClient = new ApolloClient({
 export async function checkApolloHealth(): Promise<{ connected: boolean; error?: string }> {
   try {
     const result = await apolloClient.query({
-      query: require('./graphql').MODELS_QUERY,
+      query: GET_MODELS,
       fetchPolicy: 'network-only',
       errorPolicy: 'all'
     });
