@@ -1,89 +1,112 @@
-# ☁️ Cloudflare Pages 专用部署指南
+# ☁️ Cloudflare Pages 部署修复指南
 
-## 🚨 重要提示
+## 🚨 MIME类型错误解决方案
 
-如果您在Cloudflare Pages上遇到MIME类型错误：
+您遇到的错误：
 ```
-Refused to apply style because its MIME type ('text/html') is not a supported stylesheet MIME type
+Refused to apply style from '/xiao-bao-bao/assets/index-xxx.css' because its MIME type ('text/html') is not a supported stylesheet MIME type
 ```
 
-这是因为使用了错误的构建配置。请按以下步骤操作：
+**根本原因**: Cloudflare Pages使用了GitHub Pages的构建配置，导致base路径包含 `/xiao-bao-bao/`
 
-## ✅ 正确的部署步骤
+## ✅ 立即修复步骤
 
-### 1. 在Cloudflare Pages中设置构建配置
+### 1. 在Cloudflare Pages中更新构建设置
+
+进入您的Cloudflare Pages项目设置，修改：
 
 ```
-构建命令: npm run build:cloudflare
+🔧 构建配置:
+构建命令: bash scripts/build-cloudflare.sh
 构建输出目录: dist
 根目录: / (保持默认)
 Node.js版本: 18
-```
 
-### 2. 环境变量设置
-
-在Cloudflare Pages的**设置 > 环境变量**中添加：
-
-```
+🌐 环境变量:
 VITE_GRAPHQL_ENDPOINT=https://ai-admin.juzhiqiang.shop
 VITE_MASTRA_API_URL=https://agent.juzhiqiang.shop
 ```
 
-### 3. 验证构建输出
+### 2. 触发重新部署
 
-构建完成后，检查dist目录结构应该是：
+- 在Cloudflare Pages控制台点击 "重新部署"
+- 或推送一个新的commit到main分支
+
+### 3. 验证构建日志
+
+构建日志中应该显示：
 ```
-dist/
-  ├── index.html
-  ├── assets/
-  │   ├── index-[hash].js
-  │   ├── index-[hash].css
-  │   ├── vendor-[hash].js
-  │   ├── router-[hash].js
-  │   └── apollo-[hash].js
-  ├── _redirects
-  └── favicon.svg
+🌟 Cloudflare Pages Build - mode: production, base: /
 ```
 
-### 4. 关键文件说明
+**而不是**：
+```
+Building with mode: production, base: /xiao-bao-bao/ (GitHub Pages)
+```
 
-- **`_redirects`**: 确保SPA路由和正确的MIME类型
-- **`vite.config.cloudflare.ts`**: Cloudflare专用构建配置
-- **base路径**: 设置为 `/` (根路径)
+## 🔍 构建日志验证
 
-## 🔍 常见问题
-
-### Q: 为什么不能使用默认的build命令？
-A: 默认的 `npm run build` 是为GitHub Pages配置的，base路径为 `/xiao-bao-bao/`，在Cloudflare上会导致资源404错误。
-
-### Q: 如果仍然出现404错误怎么办？
-A: 
-1. 清除Cloudflare Pages的缓存
-2. 重新部署，确保使用 `npm run build:cloudflare`
-3. 检查浏览器网络面板，确认请求的是正确的路径
-
-### Q: 如何在本地测试Cloudflare配置？
-A: 使用预览命令：
+正确的构建日志应该包含：
 ```bash
+🌟 开始 Cloudflare Pages 构建...
+📊 环境信息:
+📦 安装依赖...
+🔍 TypeScript 检查...
+🏗️ 使用 Cloudflare 配置构建...
+配置文件: vite.config.cloudflare.ts
+🎉 Cloudflare Pages 构建完成！
+```
+
+## 📄 预期的资源路径
+
+修复后，您的页面应该加载：
+- ✅ `https://al.juzhiqiang.shop/assets/index-xxx.css`
+- ✅ `https://al.juzhiqiang.shop/assets/vendor-xxx.js`
+- ✅ `https://al.juzhiqiang.shop/assets/index-xxx.js`
+
+**而不是**：
+- ❌ `https://al.juzhiqiang.shop/xiao-bao-bao/assets/...`
+
+## 🛠️ 本地测试
+
+在部署前，您可以本地测试Cloudflare配置：
+
+```bash
+# 安装依赖
+npm install
+
+# 使用Cloudflare配置构建
+npm run build:cloudflare
+
+# 本地预览
 npm run preview:cloudflare
 ```
 
-## 🚀 自动化部署
+然后访问 `http://localhost:3000` 验证是否正常。
 
-如果您想要自动化Cloudflare部署，可以：
+## 🔄 如果问题仍然存在
 
-1. 在Cloudflare Pages中连接GitHub仓库
-2. 设置分支为 `main`
-3. 使用上述构建配置
-4. 推送代码即可自动部署
+1. **清除Cloudflare缓存**:
+   - 在Cloudflare Pages项目中点击 "清除缓存"
+   - 或在Cloudflare DNS设置中清除缓存
 
-## 📞 技术支持
+2. **检查构建日志**:
+   - 确认使用了 `vite.config.cloudflare.ts`
+   - 确认base路径为 `/`
 
-如果遇到问题：
-1. 检查Cloudflare Pages的构建日志
-2. 验证构建命令是否正确
-3. 查看浏览器控制台的错误信息
-4. 提交GitHub Issue寻求帮助
+3. **验证_redirects文件**:
+   ```
+   /*    /index.html   200
+   ```
+
+## 📱 移动端和PWA支持
+
+修复后还支持：
+- 响应式设计
+- 移动端优化
+- 路由导航
+- API连接状态显示
 
 ---
-💡 记住：Cloudflare Pages必须使用 `npm run build:cloudflare` 命令！
+
+💡 **关键要点**: 必须使用 `npm run build:cloudflare` 或 `bash scripts/build-cloudflare.sh` 进行Cloudflare部署！
