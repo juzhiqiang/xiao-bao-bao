@@ -3,10 +3,8 @@ import react from '@vitejs/plugin-react'
 
 // https://vitejs.dev/config/
 export default defineConfig(({ command, mode }) => {
-  // 简化配置 - 根据实际需要设置base路径
-  // GitHub Pages: /xiao-bao-bao/
-  // Cloudflare Pages: / (需要在构建时手动调整)
-  const base = mode === 'production' ? '/xiao-bao-bao/' : '/';
+ 
+  const base = mode === 'production' ? './' : '/';
 
   return {
     plugins: [react()],
