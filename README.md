@@ -3,7 +3,7 @@
 🤖 豆包风格的AI对话框组件 (React + TypeScript) 支持流式响应与合同审核
 
 [![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](https://choosealicense.com/licenses/mit/)
-[![Version](https://img.shields.io/badge/version-2.0.0-blue.svg)](https://github.com/juzhiqiang/xiao-bao-bao)
+[![Version](https://img.shields.io/badge/version-2.1.0-blue.svg)](https://github.com/juzhiqiang/xiao-bao-bao)
 [![React](https://img.shields.io/badge/React-18.2.0-blue.svg)](https://reactjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0.2-blue.svg)](https://www.typescriptlang.org/)
 
@@ -16,12 +16,14 @@
 - **创意写作** - 文章、故事、诗歌等创意内容生成
 - **学习指导** - 知识讲解和学习辅助
 
-### 📋 合同审核 (NEW!)
-- **专业审核** - 基于 Mastra Agent 的智能合同审核
+### 📋 合同审核 (v2.1 升级！)
+- **专业审核** - 基于官方 @mastra/client-js 的智能合同审核
 - **合规检查** - 法律法规和行业标准合规性检查
 - **风险评估** - 识别潜在风险点和法律漏洞
 - **改进建议** - 提供具体的修改建议和解决方案
 - **文件支持** - 支持 PDF、Word、文本文件上传
+- **流式响应** - 实时流式审核结果展示
+- **HTTPS安全** - 全程加密通信保障数据安全
 
 ### 🎨 界面特性
 - **现代化设计** - 豆包风格的美观界面
@@ -36,7 +38,7 @@
 - **Vite** - 快速的开发和构建工具
 - **Tailwind CSS** - 原子化 CSS 框架
 - **GraphQL** - 高效的数据查询
-- **Mastra Client** - 专业的 AI Agent 集成
+- **@mastra/client-js** - 官方 Mastra 客户端集成
 
 ## 🚀 快速开始
 
@@ -69,8 +71,9 @@ vim .env
 
 必要的环境变量：
 ```env
-# Mastra API 配置（用于合同审核功能）
-VITE_MASTRA_API_URL=http://localhost:4111
+# Mastra API 配置（用于合同审核功能） - 已升级！
+REACT_APP_MASTRA_BASE_URL=https://agent.juzhiqiang.shop
+VITE_MASTRA_API_URL=https://agent.juzhiqiang.shop
 
 # GraphQL API 配置
 VITE_GRAPHQL_ENDPOINT=https://ai-admin.juzhiqiang.shop
@@ -109,6 +112,18 @@ yarn build
 
 详细使用说明请参考：[合同审核功能文档](./docs/CONTRACT_REVIEW.md)
 
+## 🆕 v2.1 升级亮点
+
+### Mastra 客户端升级
+- ✅ **官方库集成**: 替换为 `@mastra/client-js`
+- ✅ **HTTPS 安全**: 服务端点升级为 `https://agent.juzhiqiang.shop`
+- ✅ **真实 API**: 使用真正的 Mastra workflows API
+- ✅ **流式增强**: 支持真正的流式数据传输
+- ✅ **连接监控**: 实时连接状态检查
+- ✅ **向后兼容**: 所有现有接口保持不变
+
+查看详细升级指南：[Mastra 升级文档](./docs/MASTRA_UPGRADE.md)
+
 ## 🏗️ 项目结构
 
 ```
@@ -120,7 +135,10 @@ src/
 ├── lib/
 │   ├── streaming.ts                   # 流式响应处理
 │   ├── graphql.ts                     # GraphQL 相关
-│   └── mastraClient.ts                # Mastra 客户端
+│   └── mastraClient.ts                # Mastra 客户端 (v2.1 升级)
+├── docs/
+│   ├── MASTRA_UPGRADE.md              # 升级指南
+│   └── CONTRACT_REVIEW.md             # 合同审核文档
 ├── App.tsx                            # 路由配置
 ├── main.tsx                           # 应用入口
 └── index.css                          # 全局样式
@@ -131,11 +149,34 @@ src/
 ### GraphQL API
 本项目支持 GraphQL 流式查询，提供实时的对话体验。
 
-### Mastra Agent API
-集成了专业的合同审核 Agent，基于以下技术栈：
-- [@mastra/client-js](https://www.npmjs.com/package/@mastra/client-js) - Mastra 客户端
+### Mastra Agent API (v2.1 升级)
+集成了官方 Mastra 客户端，基于以下技术栈：
+- [@mastra/client-js](https://www.npmjs.com/package/@mastra/client-js) - 官方 Mastra 客户端
 - [recodeAgent](https://github.com/juzhiqiang/recodeAgent) - 合同审核代理服务
 - DeepSeek AI - 底层语言模型
+- HTTPS 安全连接 - agent.juzhiqiang.shop
+
+#### 主要 API 功能
+```typescript
+// 工作流执行
+await mastraClient.workflows.run({
+  workflowId: 'contract-review-workflow',
+  input: { ... }
+});
+
+// 流式响应
+await mastraClient.workflows.stream({
+  workflowId: 'contract-review-workflow',
+  onData: (chunk) => { ... },
+  onComplete: () => { ... }
+});
+
+// 健康检查
+await mastraClient.health.check();
+
+// 代理列表
+await mastraClient.agents.list();
+```
 
 ## 🎨 自定义主题
 
@@ -169,7 +210,7 @@ npm run deploy
 ### Cloudflare Pages
 
 ```bash
-npm run build:cloudflare
+npm run build
 ```
 
 然后将 `dist` 目录上传到 Cloudflare Pages。
@@ -215,6 +256,29 @@ npm run deploy
 3. 提交 Pull Request
 4. 代码审查后合并到 `main`
 
+## 🔄 从 v2.0 升级到 v2.1
+
+如果你已经在使用 v2.0 版本，升级到 v2.1 非常简单：
+
+```bash
+# 1. 拉取最新代码
+git pull origin main
+
+# 2. 安装新依赖
+npm install
+
+# 3. 更新环境变量
+# 将 .env 文件中的 VITE_MASTRA_API_URL 从 http://localhost:4111 
+# 更新为 https://agent.juzhiqiang.shop
+
+# 4. 启动应用
+npm run dev
+```
+
+所有现有的 API 接口保持不变，无需修改任何代码！
+
+详细升级指南：[MASTRA_UPGRADE.md](./docs/MASTRA_UPGRADE.md)
+
 ## 🤝 贡献
 
 欢迎贡献代码！请遵循以下步骤：
@@ -231,6 +295,21 @@ npm run deploy
 - 添加适当的注释
 - 更新相关文档
 - 添加或更新测试（如果适用）
+
+## 📝 更新日志
+
+### v2.1.0 (2025-08-13)
+- ✅ **重大升级**: 使用官方 `@mastra/client-js` 替换自定义实现
+- ✅ **安全提升**: 服务端点升级至 HTTPS (agent.juzhiqiang.shop)
+- ✅ **性能优化**: 真实 Mastra API 集成，移除 Mock 延迟
+- ✅ **功能增强**: 新增连接检查、工作流历史等功能
+- ✅ **环境配置**: 支持 `REACT_APP_MASTRA_BASE_URL` 环境变量
+- ✅ **文档完善**: 新增升级指南和详细使用文档
+
+### v2.0.0
+- 🎉 **合同审核功能**: 基于 Mastra Agent 的智能合同审核
+- 🎨 **界面优化**: 全新的豆包风格设计
+- ⚡ **性能提升**: GraphQL 流式响应优化
 
 ## 📄 许可证
 
@@ -250,6 +329,7 @@ npm run deploy
 - 项目链接: [https://github.com/juzhiqiang/xiao-bao-bao](https://github.com/juzhiqiang/xiao-bao-bao)
 - 在线演示: [https://juzhiqiang.github.io/xiao-bao-bao](https://juzhiqiang.github.io/xiao-bao-bao)
 - 问题反馈: [Issues](https://github.com/juzhiqiang/xiao-bao-bao/issues)
+- 升级指南: [MASTRA_UPGRADE.md](./docs/MASTRA_UPGRADE.md)
 
 ---
 
