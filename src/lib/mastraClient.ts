@@ -1,4 +1,4 @@
-import { MastraClient } from '@mastra/client-js';
+import { MastraClient } from "@mastra/client-js";
 
 // Mastra客户端配置接口
 interface MastraClientConfig {
@@ -12,8 +12,7 @@ interface MastraClientConfig {
 
 // 环境变量配置
 const getBaseUrl = (): string => {
-  // 优先使用环境变量，否则使用默认值
-  return process.env.REACT_APP_MASTRA_BASE_URL || 'https://agent.juzhiqiang.shop';
+  return "https://agent.juzhiqiang.shop";
 };
 
 // 创建Mastra客户端实例
@@ -24,11 +23,11 @@ export const mastraClient = new MastraClient({
 // 合同审查客户端类
 export class ContractReviewClient {
   private client: MastraClient;
-  private agentId = 'contractAuditAgent';
+  private agentId = "contractAuditAgent";
 
   constructor(config?: Partial<MastraClientConfig>) {
     const baseUrl = config?.baseUrl || getBaseUrl();
-    
+
     this.client = new MastraClient({
       baseUrl,
       retries: config?.retries || 3,
@@ -36,7 +35,11 @@ export class ContractReviewClient {
       maxBackoffMs: config?.maxBackoffMs || 5000,
       headers: config?.headers,
     });
+
+  console.log(this.client)
+
   }
+
 
   /**
    * 审核合同内容
@@ -44,7 +47,10 @@ export class ContractReviewClient {
    * @param contractType 合同类型（可选）
    * @returns 审核结果
    */
-  async reviewContract(contractContent: string, contractType?: string): Promise<{
+  async reviewContract(
+    contractContent: string,
+    contractType?: string
+  ): Promise<{
     success: boolean;
     data?: any;
     error?: string;
@@ -53,8 +59,10 @@ export class ContractReviewClient {
       // 构建消息
       const messages = [
         {
-          role: 'user' as const,
-          content: `请审核以下${contractType ? contractType : ''}合同的合规性：\n\n${contractContent}`,
+          role: "user" as const,
+          content: `请审核以下${
+            contractType ? contractType : ""
+          }合同的合规性：\n\n${contractContent}`,
         },
       ];
 
@@ -70,10 +78,11 @@ export class ContractReviewClient {
         data: response,
       };
     } catch (error) {
-      console.error('Contract review error:', error);
+      console.error("Contract review error:", error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : '合同审核失败，请稍后重试',
+        error:
+          error instanceof Error ? error.message : "合同审核失败，请稍后重试",
       };
     }
   }
@@ -97,12 +106,14 @@ export class ContractReviewClient {
       // 构建消息
       const messages = [
         {
-          role: 'user' as const,
-          content: `请审核以下${contractType ? contractType : ''}合同的合规性：\n\n${contractContent}`,
+          role: "user" as const,
+          content: `请审核以下${
+            contractType ? contractType : ""
+          }合同的合规性：\n\n${contractContent}`,
         },
       ];
 
-      let fullResponse = '';
+      let fullResponse = "";
 
       // 获取代理实例并生成流式响应
       const agent = this.client.getAgent(this.agentId);
@@ -114,54 +125,58 @@ export class ContractReviewClient {
       // 处理流式响应
       if (stream && stream.body) {
         const reader = stream.body.getReader();
-        
+
         try {
           while (true) {
             const { done, value } = await reader.read();
-            
+
             if (done) break;
-            
+
             // 处理chunk数据
             const chunk = new TextDecoder().decode(value);
-            const lines = chunk.split('\n');
-            
+            const lines = chunk.split("\n");
+
             for (const line of lines) {
-              if (line.trim() && line.startsWith('data: ')) {
+              if (line.trim() && line.startsWith("data: ")) {
                 try {
                   const data = JSON.parse(line.slice(6));
-                  const content = data?.content || data?.delta?.content || '';
-                  
+                  const content = data?.content || data?.delta?.content || "";
+
                   if (content) {
                     fullResponse += content;
                     onChunk(content);
                   }
                 } catch (parseError) {
                   // 忽略解析错误，继续处理下一行
-                  console.warn('Parse error:', parseError);
+                  console.warn("Parse error:", parseError);
                 }
               }
             }
           }
-          
+
           onComplete(fullResponse);
         } finally {
           reader.releaseLock();
         }
       } else {
         // 如果没有流式响应，回退到普通模式
-        const response = await this.reviewContract(contractContent, contractType);
+        const response = await this.reviewContract(
+          contractContent,
+          contractType
+        );
         if (response.success) {
-          const content = response.data?.content || response.data?.message || '审核完成';
+          const content =
+            response.data?.content || response.data?.message || "审核完成";
           fullResponse = content;
           onChunk(content);
           onComplete(fullResponse);
         } else {
-          onError(new Error(response.error || '审核失败'));
+          onError(new Error(response.error || "审核失败"));
         }
       }
     } catch (error) {
-      console.error('Contract review stream error:', error);
-      onError(error instanceof Error ? error : new Error('合同审核流失败'));
+      console.error("Contract review stream error:", error);
+      onError(error instanceof Error ? error : new Error("合同审核流失败"));
     }
   }
 
@@ -176,13 +191,13 @@ export class ContractReviewClient {
     try {
       // 尝试获取代理实例并发送测试消息来检查连接
       const agent = this.client.getAgent(this.agentId);
-      
+
       // 发送一个简单的测试消息
       await agent.generate({
         messages: [
           {
-            role: 'user' as const,
-            content: '测试连接',
+            role: "user" as const,
+            content: "测试连接",
           },
         ],
         temperature: 0.1,
@@ -190,10 +205,10 @@ export class ContractReviewClient {
 
       return { connected: true };
     } catch (error) {
-      console.error('Connection check failed:', error);
+      console.error("Connection check failed:", error);
       return {
         connected: false,
-        error: error instanceof Error ? error.message : '无法连接到Mastra服务',
+        error: error instanceof Error ? error.message : "无法连接到Mastra服务",
       };
     }
   }
@@ -213,13 +228,13 @@ export class ContractReviewClient {
       // 这里我们返回一个预定义的列表
       return {
         success: true,
-        agents: [this.agentId, 'weatherAgent'],
+        agents: [this.agentId, "weatherAgent"],
       };
     } catch (error) {
-      console.error('Get agents error:', error);
+      console.error("Get agents error:", error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : '获取代理列表失败',
+        error: error instanceof Error ? error.message : "获取代理列表失败",
       };
     }
   }
@@ -237,20 +252,20 @@ export class ContractReviewClient {
     try {
       const targetAgentId = agentId || this.agentId;
       const agent = this.client.getAgent(targetAgentId);
-      
+
       return {
         success: true,
         agent: {
           id: targetAgentId,
           name: targetAgentId,
-          status: 'active'
+          status: "active",
         },
       };
     } catch (error) {
-      console.error('Get agent info error:', error);
+      console.error("Get agent info error:", error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : '获取代理信息失败',
+        error: error instanceof Error ? error.message : "获取代理信息失败",
       };
     }
   }
@@ -260,7 +275,7 @@ export class ContractReviewClient {
    * @param testMessage 测试消息
    * @returns 测试结果
    */
-  async testAgent(testMessage: string = '你好，这是一个测试消息'): Promise<{
+  async testAgent(testMessage: string = "你好，这是一个测试消息"): Promise<{
     success: boolean;
     response?: any;
     error?: string;
@@ -270,7 +285,7 @@ export class ContractReviewClient {
       const response = await agent.generate({
         messages: [
           {
-            role: 'user' as const,
+            role: "user" as const,
             content: testMessage,
           },
         ],
@@ -282,10 +297,10 @@ export class ContractReviewClient {
         response,
       };
     } catch (error) {
-      console.error('Test agent error:', error);
+      console.error("Test agent error:", error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : '代理测试失败',
+        error: error instanceof Error ? error.message : "代理测试失败",
       };
     }
   }
