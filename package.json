@@ -41,7 +41,8 @@
     "rehype-highlight": "^7.0.0",
     "@apollo/client": "^3.8.7",
     "graphql": "^16.8.1",
-    "graphql-tag": "^2.12.6"
+    "graphql-tag": "^2.12.6",
+    "@mastra/client-js": "^1.0.0"
   },
   "devDependencies": {
     "@types/react": "^18.2.15",
