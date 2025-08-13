@@ -36,7 +36,7 @@ export class ContractReviewClient {
       headers: config?.headers,
     });
 
-    this.client.mastraClient.getAgents().then((agents) => {
+    this.client.getAgents().then((agents) => {
       console.log("Agents:", agents);
     });
 
