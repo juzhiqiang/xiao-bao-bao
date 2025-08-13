@@ -5,7 +5,7 @@ import react from '@vitejs/plugin-react'
 export default defineConfig(({ command, mode }) => {
   // 简化base路径逻辑
   const base = mode === 'production' && process.env.GITHUB_PAGES === 'true' 
-    ? '/xiao-bao-bao/' 
+    ? '/' 
     : '/';
 
   return {
