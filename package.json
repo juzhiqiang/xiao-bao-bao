@@ -1,6 +1,6 @@
 {
   "name": "xiao-bao-bao",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "🤖 小包包 - 豆包风格的AI对话框组件 (React + TypeScript) 支持流式响应与合同审核",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -42,7 +42,7 @@
     "@apollo/client": "^3.8.7",
     "graphql": "^16.8.1",
     "graphql-tag": "^2.12.6",
-    "@mastra/client-js": "^1.0.0"
+    "@mastra/client-js": "^0.10.20"
   },
   "devDependencies": {
     "@types/react": "^18.2.15",
