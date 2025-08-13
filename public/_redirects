@@ -1,16 +1,1 @@
-# Cloudflare Pages 重定向规则
-# 将所有非文件请求重定向到index.html，用于SPA路由
-
 /*    /index.html   200
-
-# 针对常见的静态资源设置正确的MIME类型
-*.js    200    Content-Type: application/javascript
-*.mjs   200    Content-Type: application/javascript
-*.css   200    Content-Type: text/css
-*.svg   200    Content-Type: image/svg+xml
-*.png   200    Content-Type: image/png
-*.jpg   200    Content-Type: image/jpeg
-*.jpeg  200    Content-Type: image/jpeg
-*.ico   200    Content-Type: image/x-icon
-*.woff  200    Content-Type: font/woff
-*.woff2 200    Content-Type: font/woff2
