@@ -90,7 +90,7 @@ export class ContractReviewClient {
   }
 
   /**
-   * 流式审核合同内容
+   * 流式审核合同内容 - 修复版本
    * @param contractContent 合同内容
    * @param contractType 合同类型（可选）
    * @param onChunk 流式数据回调
@@ -139,7 +139,13 @@ export class ContractReviewClient {
             const lines = chunk.split("\n");
 
             for (const line of lines) {
-              if (line.trim() && line.startsWith("data: ")) {
+              if (!line.trim()) continue;
+              
+              // 调试日志
+              console.log("Processing line:", line);
+              
+              // 处理标准SSE格式：data: {...}
+              if (line.startsWith("data: ")) {
                 try {
                   const data = JSON.parse(line.slice(6));
                   const content = data?.content || data?.delta?.content || "";
@@ -149,19 +155,74 @@ export class ContractReviewClient {
                     onChunk(content);
                   }
                 } catch (parseError) {
-                  // 忽略解析错误，继续处理下一行
-                  console.warn("Parse error:", parseError);
+                  console.warn("Parse SSE data error:", parseError);
+                }
+              }
+              // 处理编号格式：0:"文本"
+              else if (line.match(/^[0-9]+:".+"/)) {
+                try {
+                  const colonIndex = line.indexOf(':');
+                  if (colonIndex > 0) {
+                    const jsonStr = line.slice(colonIndex + 1);
+                    const content = JSON.parse(jsonStr);
+                    
+                    if (typeof content === 'string') {
+                      fullResponse += content;
+                      onChunk(content);
+                      console.log("Parsed content chunk:", content);
+                    }
+                  }
+                } catch (parseError) {
+                  console.warn("Parse numbered format error:", parseError, "Line:", line);
+                }
+              }
+              // 处理控制信息：f:{...}, e:{...}, d:{...}
+              else if (line.match(/^[a-z]:\{.*\}/)) {
+                try {
+                  const prefix = line.charAt(0);
+                  const jsonStr = line.slice(2);
+                  const data = JSON.parse(jsonStr);
+                  
+                  if (prefix === 'e') {
+                    // 结束信号
+                    console.log("Stream finished:", data);
+                  } else if (prefix === 'f') {
+                    // 开始信号
+                    console.log("Stream started:", data);
+                  }
+                } catch (parseError) {
+                  console.warn("Parse control message error:", parseError);
+                }
+              }
+              // 尝试直接解析为JSON
+              else {
+                try {
+                  const data = JSON.parse(line);
+                  const content = data?.content || data?.delta?.content || "";
+                  
+                  if (content) {
+                    fullResponse += content;
+                    onChunk(content);
+                  }
+                } catch (parseError) {
+                  // 如果不是JSON，可能是纯文本
+                  if (line.trim() && !line.includes(':') && line.length > 1) {
+                    fullResponse += line;
+                    onChunk(line);
+                  }
                 }
               }
             }
           }
 
+          console.log("Stream complete. Full response:", fullResponse);
           onComplete(fullResponse);
         } finally {
           reader.releaseLock();
         }
       } else {
         // 如果没有流式响应，回退到普通模式
+        console.log("No stream body, falling back to regular mode");
         const response = await this.reviewContract(
           contractContent,
           contractType
@@ -178,7 +239,21 @@ export class ContractReviewClient {
       }
     } catch (error) {
       console.error("Contract review stream error:", error);
-      onError(error instanceof Error ? error : new Error("合同审核流失败"));
+      
+      // 如果流式调用失败，尝试回退到普通模式
+      try {
+        console.log("Stream failed, trying fallback...");
+        const response = await this.reviewContract(contractContent, contractType);
+        if (response.success) {
+          const content = response.data?.content || response.data?.message || "审核完成";
+          onChunk(content);
+          onComplete(content);
+        } else {
+          onError(new Error(response.error || "审核失败"));
+        }
+      } catch (fallbackError) {
+        onError(error instanceof Error ? error : new Error("合同审核流失败"));
+      }
     }
   }
 
