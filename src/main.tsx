@@ -13,18 +13,46 @@ if (!rootElement) {
   throw new Error('Root element not found');
 }
 
-// 简化的basename检测
+// 修复的basename检测逻辑
 function getBasename(): string {
-  // 如果是GitHub Pages域名或路径包含仓库名，使用GitHub配置
-  if (window.location.hostname === 'juzhiqiang.github.io' || 
-      window.location.pathname.startsWith('/xiao-bao-bao/')) {
+  const hostname = window.location.hostname;
+  const pathname = window.location.pathname;
+  
+  // GitHub Pages 特定域名
+  if (hostname === 'juzhiqiang.github.io') {
     return '/xiao-bao-bao';
   }
-  // 其他情况使用根路径
+  
+  // 如果是自定义域名 (al.juzhiqiang.shop)，使用根路径
+  if (hostname === 'al.juzhiqiang.shop' || hostname.includes('juzhiqiang.shop')) {
+    return '/';
+  }
+  
+  // 开发环境检测
+  if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname.includes('.local')) {
+    return '/';
+  }
+  
+  // 如果路径明确包含项目名，说明是在子路径部署
+  if (pathname.startsWith('/xiao-bao-bao/') && !pathname.startsWith('/xiao-bao-bao/contract-review')) {
+    return '/xiao-bao-bao';
+  }
+  
+  // 默认使用根路径
   return '/';
 }
 
 const basename = getBasename();
+
+// 调试信息（仅在开发环境）
+if (import.meta.env.DEV) {
+  console.log('🔧 Router Config:', {
+    hostname: window.location.hostname,
+    pathname: window.location.pathname,
+    basename: basename,
+    fullUrl: window.location.href
+  });
+}
 
 createRoot(rootElement).render(
   <StrictMode>
