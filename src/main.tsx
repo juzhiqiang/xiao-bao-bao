@@ -13,32 +13,16 @@ if (!rootElement) {
   throw new Error('Root element not found');
 }
 
-// 修复的basename检测逻辑
+// 简化的basename检测 - 只有GitHub Pages使用子路径
 function getBasename(): string {
   const hostname = window.location.hostname;
-  const pathname = window.location.pathname;
   
-  // GitHub Pages 特定域名
+  // 只有GitHub Pages需要使用子路径
   if (hostname === 'juzhiqiang.github.io') {
     return '/xiao-bao-bao';
   }
   
-  // 如果是自定义域名 (al.juzhiqiang.shop)，使用根路径
-  if (hostname === 'al.juzhiqiang.shop' || hostname.includes('juzhiqiang.shop')) {
-    return '/';
-  }
-  
-  // 开发环境检测
-  if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname.includes('.local')) {
-    return '/';
-  }
-  
-  // 如果路径明确包含项目名，说明是在子路径部署
-  if (pathname.startsWith('/xiao-bao-bao/') && !pathname.startsWith('/xiao-bao-bao/contract-review')) {
-    return '/xiao-bao-bao';
-  }
-  
-  // 默认使用根路径
+  // 所有其他情况（包括自定义域名）都使用根路径
   return '/';
 }
 
