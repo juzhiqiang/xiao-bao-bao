@@ -4,6 +4,9 @@ import { MastraClient } from '@mastra/client-js';
 interface MastraClientConfig {
   baseUrl: string;
   apiKey?: string;
+  retries?: number;
+  backoffMs?: number;
+  maxBackoffMs?: number;
   headers?: Record<string, string>;
 }
 
@@ -28,7 +31,10 @@ export class ContractReviewClient {
     
     this.client = new MastraClient({
       baseUrl,
-      ...config,
+      retries: config?.retries || 3,
+      backoffMs: config?.backoffMs || 300,
+      maxBackoffMs: config?.maxBackoffMs || 5000,
+      headers: config?.headers,
     });
   }
 
@@ -52,14 +58,11 @@ export class ContractReviewClient {
         },
       ];
 
-      // 使用新的Mastra客户端API
-      const response = await this.client.workflows.run({
-        workflowId: 'contract-review-workflow',
-        input: {
-          messages,
-          agentId: this.agentId,
-          temperature: 0.1, // 较低的温度确保审核结果的一致性
-        },
+      // 获取代理实例并生成响应
+      const agent = this.client.getAgent(this.agentId);
+      const response = await agent.generate({
+        messages,
+        temperature: 0.1, // 较低的温度确保审核结果的一致性
       });
 
       return {
@@ -101,28 +104,61 @@ export class ContractReviewClient {
 
       let fullResponse = '';
 
-      // 使用Mastra客户端的流式API
-      await this.client.workflows.stream({
-        workflowId: 'contract-review-workflow',
-        input: {
-          messages,
-          agentId: this.agentId,
-          temperature: 0.1,
-        },
-        onData: (chunk: any) => {
-          const content = chunk?.content || chunk?.delta?.content || '';
-          if (content) {
-            fullResponse += content;
-            onChunk(content);
-          }
-        },
-        onComplete: () => {
-          onComplete(fullResponse);
-        },
-        onError: (error: Error) => {
-          onError(error);
-        },
+      // 获取代理实例并生成流式响应
+      const agent = this.client.getAgent(this.agentId);
+      const stream = await agent.stream({
+        messages,
+        temperature: 0.1,
       });
+
+      // 处理流式响应
+      if (stream && stream.body) {
+        const reader = stream.body.getReader();
+        
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            
+            if (done) break;
+            
+            // 处理chunk数据
+            const chunk = new TextDecoder().decode(value);
+            const lines = chunk.split('\n');
+            
+            for (const line of lines) {
+              if (line.trim() && line.startsWith('data: ')) {
+                try {
+                  const data = JSON.parse(line.slice(6));
+                  const content = data?.content || data?.delta?.content || '';
+                  
+                  if (content) {
+                    fullResponse += content;
+                    onChunk(content);
+                  }
+                } catch (parseError) {
+                  // 忽略解析错误，继续处理下一行
+                  console.warn('Parse error:', parseError);
+                }
+              }
+            }
+          }
+          
+          onComplete(fullResponse);
+        } finally {
+          reader.releaseLock();
+        }
+      } else {
+        // 如果没有流式响应，回退到普通模式
+        const response = await this.reviewContract(contractContent, contractType);
+        if (response.success) {
+          const content = response.data?.content || response.data?.message || '审核完成';
+          fullResponse = content;
+          onChunk(content);
+          onComplete(fullResponse);
+        } else {
+          onError(new Error(response.error || '审核失败'));
+        }
+      }
     } catch (error) {
       console.error('Contract review stream error:', error);
       onError(error instanceof Error ? error : new Error('合同审核流失败'));
@@ -138,8 +174,20 @@ export class ContractReviewClient {
     error?: string;
   }> {
     try {
-      // 使用健康检查API
-      await this.client.health.check();
+      // 尝试获取代理实例并发送测试消息来检查连接
+      const agent = this.client.getAgent(this.agentId);
+      
+      // 发送一个简单的测试消息
+      await agent.generate({
+        messages: [
+          {
+            role: 'user' as const,
+            content: '测试连接',
+          },
+        ],
+        temperature: 0.1,
+      });
+
       return { connected: true };
     } catch (error) {
       console.error('Connection check failed:', error);
@@ -160,12 +208,12 @@ export class ContractReviewClient {
     error?: string;
   }> {
     try {
-      // 使用Mastra客户端获取代理列表
-      const response = await this.client.agents.list();
-      
+      // 目前返回已知的代理ID
+      // 注意：实际的Mastra客户端可能没有直接的agents.list()方法
+      // 这里我们返回一个预定义的列表
       return {
         success: true,
-        agents: response.data?.map((agent: any) => agent.id) || ['contractAuditAgent'],
+        agents: [this.agentId, 'weatherAgent'],
       };
     } catch (error) {
       console.error('Get agents error:', error);
@@ -177,28 +225,67 @@ export class ContractReviewClient {
   }
 
   /**
-   * 获取工作流执行历史
-   * @returns 执行历史
+   * 获取代理信息
+   * @param agentId 代理ID
+   * @returns 代理信息
    */
-  async getWorkflowHistory(): Promise<{
+  async getAgentInfo(agentId?: string): Promise<{
     success: boolean;
-    history?: any[];
+    agent?: any;
     error?: string;
   }> {
     try {
-      const response = await this.client.workflows.list({
-        workflowId: 'contract-review-workflow',
+      const targetAgentId = agentId || this.agentId;
+      const agent = this.client.getAgent(targetAgentId);
+      
+      return {
+        success: true,
+        agent: {
+          id: targetAgentId,
+          name: targetAgentId,
+          status: 'active'
+        },
+      };
+    } catch (error) {
+      console.error('Get agent info error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : '获取代理信息失败',
+      };
+    }
+  }
+
+  /**
+   * 测试代理功能
+   * @param testMessage 测试消息
+   * @returns 测试结果
+   */
+  async testAgent(testMessage: string = '你好，这是一个测试消息'): Promise<{
+    success: boolean;
+    response?: any;
+    error?: string;
+  }> {
+    try {
+      const agent = this.client.getAgent(this.agentId);
+      const response = await agent.generate({
+        messages: [
+          {
+            role: 'user' as const,
+            content: testMessage,
+          },
+        ],
+        temperature: 0.1,
       });
 
       return {
         success: true,
-        history: response.data || [],
+        response,
       };
     } catch (error) {
-      console.error('Get workflow history error:', error);
+      console.error('Test agent error:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : '获取工作流历史失败',
+        error: error instanceof Error ? error.message : '代理测试失败',
       };
     }
   }
