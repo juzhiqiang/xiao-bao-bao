@@ -24,7 +24,6 @@ export const mastraClient = new MastraClient({
 export class ContractReviewClient {
   private client: MastraClient;
   private agentId = "contractAuditAgent";
-
   constructor(config?: Partial<MastraClientConfig>) {
     const baseUrl = config?.baseUrl || getBaseUrl();
 
@@ -35,11 +34,6 @@ export class ContractReviewClient {
       maxBackoffMs: config?.maxBackoffMs || 5000,
       headers: config?.headers,
     });
-
-    this.client.getAgents().then((agents) => {
-      console.log("Agents:", agents);
-    });
-
   }
 
 
