@@ -3,7 +3,7 @@
  * 使用 @mastra/client-js 与 recodeAgent 项目中的旅游 agent 进行交互
  */
 
-import { Mastra } from '@mastra/client-js';
+import { MastraClient } from '@mastra/client-js';
 
 export interface TravelRouteRequest {
   destinations: string[];
@@ -53,7 +53,7 @@ export interface TravelChatResponse {
 }
 
 class TravelAPIService {
-  private mastraClient: Mastra;
+  private mastraClient: MastraClient;
   private baseUrl: string;
   
   constructor() {
@@ -63,7 +63,7 @@ class TravelAPIService {
                    'https://agent.juzhiqiang.shop';
     
     // 初始化 Mastra 客户端
-    this.mastraClient = new Mastra({
+    this.mastraClient = new MastraClient({
       baseUrl: this.baseUrl,
     });
   }
