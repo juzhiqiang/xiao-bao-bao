@@ -2,11 +2,13 @@ import { Routes, Route } from 'react-router-dom';
 import XiaoBaoBaoStreamingChat from './components/XiaoBaoBaoStreamingChat';
 import ContractReviewChat from './components/ContractReviewChat';
 import TravelPlanningChat from './components/TravelPlanningChat';
+import Navigation from './components/Navigation';
 import './index.css';
 
 function App() {
   return (
-    <div className="App">
+    <div className="App relative">
+      <Navigation />
       <Routes>
         {/* 主页路由 */}
         <Route path="/" element={<XiaoBaoBaoStreamingChat />} />
