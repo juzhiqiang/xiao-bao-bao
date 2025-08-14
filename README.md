@@ -1,9 +1,9 @@
 # 小包包 (XiaoBaoBao)
 
-🤖 豆包风格的AI对话框组件 (React + TypeScript) 支持流式响应与合同审核
+🤖 豆包风格的AI对话框组件 (React + TypeScript) 支持流式响应、合同审核与旅游规划
 
 [![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](https://choosealicense.com/licenses/mit/)
-[![Version](https://img.shields.io/badge/version-2.1.0-blue.svg)](https://github.com/juzhiqiang/xiao-bao-bao)
+[![Version](https://img.shields.io/badge/version-2.2.0-blue.svg)](https://github.com/juzhiqiang/xiao-bao-bao)
 [![React](https://img.shields.io/badge/React-18.2.0-blue.svg)](https://reactjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0.2-blue.svg)](https://www.typescriptlang.org/)
 
@@ -16,7 +16,7 @@
 - **创意写作** - 文章、故事、诗歌等创意内容生成
 - **学习指导** - 知识讲解和学习辅助
 
-### 📋 合同审核 (v2.1 升级！)
+### 📋 合同审核功能
 - **专业审核** - 基于官方 @mastra/client-js 的智能合同审核
 - **合规检查** - 法律法规和行业标准合规性检查
 - **风险评估** - 识别潜在风险点和法律漏洞
@@ -25,8 +25,18 @@
 - **流式响应** - 实时流式审核结果展示
 - **HTTPS安全** - 全程加密通信保障数据安全
 
+### 🗺️ 旅游规划功能 (v2.2 新增！)
+- **智能路线规划** - 根据地理位置优化旅行路线
+- **个性化推荐** - 支持经济型、舒适型、奢华型三种旅行风格
+- **详细行程安排** - 提供逐日行程和景点推荐
+- **预算估算** - 根据旅行风格智能估算费用
+- **实用建议** - 提供旅行贴士和注意事项
+- **全球目的地** - 支持全球主要旅游城市
+- **自然语言交互** - 通过对话方式规划旅行
+
 ### 🎨 界面特性
 - **现代化设计** - 豆包风格的美观界面
+- **模块化导航** - 智能导航栏，在不同功能间快速切换
 - **响应式布局** - 适配各种设备屏幕
 - **流畅动画** - 精美的过渡动画和交互效果
 - **深色模式** - 支持浅色/深色主题切换
@@ -39,6 +49,7 @@
 - **Tailwind CSS** - 原子化 CSS 框架
 - **GraphQL** - 高效的数据查询
 - **@mastra/client-js** - 官方 Mastra 客户端集成
+- **Multi-Agent 架构** - 接入多个专业 AI Agent
 
 ## 🚀 快速开始
 
@@ -71,9 +82,12 @@ vim .env
 
 必要的环境变量：
 ```env
-# Mastra API 配置（用于合同审核功能） - 已升级！
+# Mastra API 配置（用于合同审核功能）
 REACT_APP_MASTRA_BASE_URL=https://agent.juzhiqiang.shop
 VITE_MASTRA_API_URL=https://agent.juzhiqiang.shop
+
+# RecodeAgent API 配置（用于旅游规划功能）- v2.2 新增
+VITE_RECODE_AGENT_API_URL=https://hello-mastra.juzhiqiang.workers.dev
 
 # GraphQL API 配置
 VITE_GRAPHQL_ENDPOINT=https://ai-admin.juzhiqiang.shop
@@ -100,29 +114,42 @@ yarn build
 ## 📖 使用指南
 
 ### 基本对话
-1. 在输入框中输入你的问题
+1. 在首页输入框中输入你的问题
 2. 按 Enter 发送消息
 3. 观察 AI 的实时流式响应
 
 ### 合同审核功能
-1. 点击右上角的 "合同审核" 按钮
+1. 点击导航栏的 "合同审核" 按钮
 2. 选择合同类型（可选）
 3. 粘贴合同文本或上传合同文件
 4. 获得专业的合规性分析报告
 
-详细使用说明请参考：[合同审核功能文档](./docs/CONTRACT_REVIEW.md)
+### 旅游规划功能 (v2.2 新增)
+1. 点击导航栏的 "旅游规划" 按钮
+2. 使用快速规划表单或自然语言对话
+3. 输入目的地、旅行风格、天数等信息
+4. 获得详细的旅游路线规划
 
-## 🆕 v2.1 升级亮点
+详细使用说明请参考：
+- [合同审核功能文档](./docs/CONTRACT_REVIEW.md)
+- [旅游规划功能文档](./docs/travel-planning-guide.md)
 
-### Mastra 客户端升级
-- ✅ **官方库集成**: 替换为 `@mastra/client-js`
-- ✅ **HTTPS 安全**: 服务端点升级为 `https://agent.juzhiqiang.shop`
-- ✅ **真实 API**: 使用真正的 Mastra workflows API
-- ✅ **流式增强**: 支持真正的流式数据传输
-- ✅ **连接监控**: 实时连接状态检查
-- ✅ **向后兼容**: 所有现有接口保持不变
+## 🆕 v2.2 升级亮点
 
-查看详细升级指南：[Mastra 升级文档](./docs/MASTRA_UPGRADE.md)
+### 旅游规划模块
+- ✅ **智能路线规划**: 集成 recodeAgent 旅游 Agent
+- ✅ **多种旅行风格**: 经济型、舒适型、奢华型选择
+- ✅ **全球目的地支持**: 涵盖欧洲、亚洲、北美、中国等热门城市
+- ✅ **预算智能估算**: 根据风格和目的地自动计算预算
+- ✅ **详细行程安排**: 逐日景点推荐和交通规划
+- ✅ **实用旅行贴士**: 签证、最佳时间、注意事项提醒
+- ✅ **自然语言交互**: 支持对话式旅游规划
+
+### 架构升级
+- ✅ **模块化导航**: 新增智能导航组件，快速切换功能
+- ✅ **API 服务层**: 新增 travelAPI.ts 统一管理旅游相关接口
+- ✅ **Multi-Agent 集成**: 同时接入多个专业 AI Agent
+- ✅ **响应式优化**: 针对旅游规划场景优化界面设计
 
 ## 🏗️ 项目结构
 
@@ -131,14 +158,17 @@ src/
 ├── components/
 │   ├── XiaoBaoBaoStreamingChat.tsx    # 主聊天组件
 │   ├── ContractReviewChat.tsx         # 合同审核组件
+│   ├── TravelPlanningChat.tsx         # 旅游规划组件 (v2.2 新增)
+│   ├── Navigation.tsx                 # 导航组件 (v2.2 新增)
 │   └── index.ts                       # 组件导出
 ├── lib/
 │   ├── streaming.ts                   # 流式响应处理
 │   ├── graphql.ts                     # GraphQL 相关
-│   └── mastraClient.ts                # Mastra 客户端 (v2.1 升级)
+│   ├── mastraClient.ts                # Mastra 客户端
+│   └── travelAPI.ts                   # 旅游 API 服务 (v2.2 新增)
 ├── docs/
-│   ├── MASTRA_UPGRADE.md              # 升级指南
-│   └── CONTRACT_REVIEW.md             # 合同审核文档
+│   ├── CONTRACT_REVIEW.md             # 合同审核文档
+│   └── travel-planning-guide.md       # 旅游规划文档 (v2.2 新增)
 ├── App.tsx                            # 路由配置
 ├── main.tsx                           # 应用入口
 └── index.css                          # 全局样式
@@ -149,33 +179,40 @@ src/
 ### GraphQL API
 本项目支持 GraphQL 流式查询，提供实时的对话体验。
 
-### Mastra Agent API (v2.1 升级)
-集成了官方 Mastra 客户端，基于以下技术栈：
+### Mastra Agent API
+集成了官方 Mastra 客户端，用于合同审核功能：
 - [@mastra/client-js](https://www.npmjs.com/package/@mastra/client-js) - 官方 Mastra 客户端
 - [recodeAgent](https://github.com/juzhiqiang/recodeAgent) - 合同审核代理服务
 - DeepSeek AI - 底层语言模型
-- HTTPS 安全连接 - agent.juzhiqiang.shop
+
+### RecodeAgent Travel API (v2.2 新增)
+集成了专门的旅游规划 API：
+- [recodeAgent](https://github.com/juzhiqiang/recodeAgent) - 旅游规划代理服务
+- Travel Route Tool - 智能路线优化算法
+- Geography API - 地理信息和距离计算
+- DeepSeek AI - 个性化推荐引擎
 
 #### 主要 API 功能
 ```typescript
-// 工作流执行
+// 合同审核
 await mastraClient.workflows.run({
   workflowId: 'contract-review-workflow',
   input: { ... }
 });
 
+// 旅游规划 (v2.2 新增)
+await travelAPIService.smartTravelPlanning({
+  destinations: ['巴黎', '伦敦'],
+  travelStyle: 'comfort',
+  duration: 7
+});
+
 // 流式响应
 await mastraClient.workflows.stream({
-  workflowId: 'contract-review-workflow',
+  workflowId: 'travel-route-workflow',
   onData: (chunk) => { ... },
   onComplete: () => { ... }
 });
-
-// 健康检查
-await mastraClient.health.check();
-
-// 代理列表
-await mastraClient.agents.list();
 ```
 
 ## 🎨 自定义主题
@@ -256,9 +293,9 @@ npm run deploy
 3. 提交 Pull Request
 4. 代码审查后合并到 `main`
 
-## 🔄 从 v2.0 升级到 v2.1
+## 🔄 从 v2.1 升级到 v2.2
 
-如果你已经在使用 v2.0 版本，升级到 v2.1 非常简单：
+如果你已经在使用 v2.1 版本，升级到 v2.2：
 
 ```bash
 # 1. 拉取最新代码
@@ -268,16 +305,14 @@ git pull origin main
 npm install
 
 # 3. 更新环境变量
-# 将 .env 文件中的 VITE_MASTRA_API_URL 从 http://localhost:4111 
-# 更新为 https://agent.juzhiqiang.shop
+# 在 .env 文件中新增：
+# VITE_RECODE_AGENT_API_URL=https://hello-mastra.juzhiqiang.workers.dev
 
 # 4. 启动应用
 npm run dev
 ```
 
-所有现有的 API 接口保持不变，无需修改任何代码！
-
-详细升级指南：[MASTRA_UPGRADE.md](./docs/MASTRA_UPGRADE.md)
+所有现有的功能保持不变，新增了旅游规划模块！
 
 ## 🤝 贡献
 
@@ -298,6 +333,15 @@ npm run dev
 
 ## 📝 更新日志
 
+### v2.2.0 (2025-08-14)
+- 🎉 **旅游规划功能**: 全新的智能旅游路线规划模块
+- 🗺️ **Multi-Agent 架构**: 集成 recodeAgent 旅游 Agent
+- 🧭 **智能导航**: 新增模块化导航组件
+- 🌍 **全球支持**: 支持全球主要旅游城市
+- 💰 **智能预算**: 根据旅行风格自动估算费用
+- 🎯 **个性化推荐**: 三种旅行风格适应不同需求
+- 📱 **响应式优化**: 移动端旅游规划体验优化
+
 ### v2.1.0 (2025-08-13)
 - ✅ **重大升级**: 使用官方 `@mastra/client-js` 替换自定义实现
 - ✅ **安全提升**: 服务端点升级至 HTTPS (agent.juzhiqiang.shop)
@@ -311,6 +355,46 @@ npm run dev
 - 🎨 **界面优化**: 全新的豆包风格设计
 - ⚡ **性能提升**: GraphQL 流式响应优化
 
+## 🌟 功能演示
+
+### 旅游规划示例
+
+**输入**: "我想去日本旅游7天，预算充足"
+
+**输出**:
+```markdown
+# 🗺️ 您的专属旅游路线规划
+
+## 📋 行程概览
+🎯 **目的地**: 东京 → 京都 → 大阪
+⏰ **总天数**: 7天
+🛣️ **总距离**: 515公里
+💰 **预算范围**: ¥12,600 - ¥16,380
+🌟 **最佳时间**: 春季(3-5月)和秋季(9-11月)
+
+## 🛤️ 详细路线安排
+
+### 📍 第1站：东京 (3天)
+**🎯 必游景点**: 浅草寺、东京塔、皇居、新宿、涩谷
+**🚗 交通方式**: 头等舱航班
+**💵 预估花费**: ¥1200-2600/天
+
+### 📍 第2站：京都 (2天)  
+**🎯 必游景点**: 清水寺、金阁寺、伏见稻荷大社
+**🚗 交通方式**: 新干线
+**💵 预估花费**: ¥1200-2600/天
+
+### 📍 第3站：大阪 (2天)
+**🎯 必游景点**: 大阪城、道顿堀、环球影城
+**🚗 交通方式**: 新干线
+**💵 预估花费**: ¥1200-2600/天
+
+## 💡 实用旅行贴士
+- 建议购买JR Pass通票，方便城际交通
+- 春季赏樱和秋季赏枫是最佳旅行时间
+- 提前预订热门餐厅和景点门票
+```
+
 ## 📄 许可证
 
 本项目基于 MIT 许可证开源 - 查看 [LICENSE](LICENSE) 文件了解详情。
@@ -323,14 +407,21 @@ npm run dev
 - [Lucide React](https://lucide.dev/) - 图标库
 - [Mastra](https://mastra.ai/) - AI Agent 框架
 - [DeepSeek](https://www.deepseek.com/) - AI 模型服务
+- [React Router](https://reactrouter.com/) - 路由管理
+- [React Markdown](https://github.com/remarkjs/react-markdown) - Markdown 渲染
 
 ## 📞 联系
 
 - 项目链接: [https://github.com/juzhiqiang/xiao-bao-bao](https://github.com/juzhiqiang/xiao-bao-bao)
 - 在线演示: [https://juzhiqiang.github.io/xiao-bao-bao](https://juzhiqiang.github.io/xiao-bao-bao)
+- 旅游规划演示: [https://juzhiqiang.github.io/xiao-bao-bao/travel-planning](https://juzhiqiang.github.io/xiao-bao-bao/travel-planning)
 - 问题反馈: [Issues](https://github.com/juzhiqiang/xiao-bao-bao/issues)
-- 升级指南: [MASTRA_UPGRADE.md](./docs/MASTRA_UPGRADE.md)
+- 功能文档: 
+  - [旅游规划指南](./docs/travel-planning-guide.md)
+  - [合同审核指南](./docs/CONTRACT_REVIEW.md)
 
 ---
 
 ⭐ 如果这个项目对你有帮助，请给它一个星标！
+
+🌟 现在支持智能旅游规划，让AI帮你规划完美的旅行路线！
