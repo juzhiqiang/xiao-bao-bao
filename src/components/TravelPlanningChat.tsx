@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, MapPin, Calendar, DollarSign, Plane, LoaderIcon, Info, Star, Clock, Navigation, AlertCircle, CheckCircle } from 'lucide-react';
+import { Send, MapPin, Calendar, DollarSign, Plane, LoaderIcon, Info, Star, Clock, Navigation, AlertCircle, CheckCircle, List, Wrench } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { travelAPIService, TravelRouteRequest, validateTravelRequest, formatTravelStyle } from '../lib/travelAPI';
@@ -31,6 +31,8 @@ const TravelPlanningChat: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
   const [apiStatus, setApiStatus] = useState<{ status: 'unknown' | 'checking' | 'connected' | 'error'; message?: string }>({ status: 'unknown' });
+  const [showDebugInfo, setShowDebugInfo] = useState(false);
+  const [debugInfo, setDebugInfo] = useState<any>(null);
   const [quickActions, setQuickActions] = useState([
     '🇪🇺 欧洲三国游（法国-意大利-西班牙）',
     '🇯🇵 日本深度游（东京-京都-大阪）',
@@ -63,7 +65,7 @@ const TravelPlanningChat: React.FC = () => {
   }, []);
 
   const testAPIConnection = async () => {
-    setApiStatus({ status: 'checking', message: '正在检测 API 连接...' });
+    setApiStatus({ status: 'checking', message: '正在检测 Mastra API 连接...' });
     
     try {
       const result = await travelAPIService.testConnection();
@@ -72,12 +74,33 @@ const TravelPlanningChat: React.FC = () => {
         message: result.message
       });
       
+      // 获取调试信息
+      const agents = await travelAPIService.getAvailableAgents();
+      const tools = await travelAPIService.getAvailableTools();
+      const workflows = await travelAPIService.getAvailableWorkflows();
+      
+      setDebugInfo({
+        connection: result,
+        agents,
+        tools,
+        workflows
+      });
+      
       // 如果连接失败，显示调试信息
       if (!result.success) {
         const systemMessage: TravelPlanningMessage = {
           id: Date.now().toString(),
           type: 'system',
-          content: `⚠️ **API 连接测试**\n\n${result.message}\n\n调试信息：\n- URL: ${result.details?.url}\n- 错误: ${result.details?.error || result.details?.status}\n\n请联系开发者检查服务状态。`,
+          content: `⚠️ **Mastra API 连接测试**\n\n${result.message}\n\n调试信息：\n- URL: ${result.details?.baseUrl}\n- 错误类型: ${result.details?.errorType}\n- 错误详情: ${result.details?.error}\n\n点击右上角的"调试信息"按钮查看更多详情。`,
+          timestamp: new Date()
+        };
+        setMessages(prev => [...prev, systemMessage]);
+      } else {
+        // 连接成功，显示可用的服务
+        const systemMessage: TravelPlanningMessage = {
+          id: Date.now().toString(),
+          type: 'system',
+          content: `✅ **Mastra API 连接成功**\n\n- 可用 Agents: ${agents.length} 个\n- 可用工具: ${tools.length} 个\n- 可用工作流: ${workflows.length} 个\n\n${result.details?.travelAgent ? `🗺️ 找到旅游 Agent: ${result.details.travelAgent}` : '⚠️ 未找到专用旅游 Agent'}`,
           timestamp: new Date()
         };
         setMessages(prev => [...prev, systemMessage]);
@@ -86,6 +109,13 @@ const TravelPlanningChat: React.FC = () => {
       setApiStatus({
         status: 'error',
         message: `连接测试失败: ${error instanceof Error ? error.message : '未知错误'}`
+      });
+      
+      setDebugInfo({
+        connection: { success: false, error: error instanceof Error ? error.message : error },
+        agents: [],
+        tools: [],
+        workflows: []
       });
     }
   };
@@ -228,12 +258,12 @@ const TravelPlanningChat: React.FC = () => {
               <div>
                 <h1 className="text-xl font-bold text-gray-800">🗺️ 旅游规划助手</h1>
                 <div className="flex items-center space-x-2">
-                  <p className="text-sm text-gray-600">为您量身定制完美旅行计划</p>
+                  <p className="text-sm text-gray-600">基于 Mastra SDK 的智能旅游规划</p>
                   <div className="flex items-center space-x-1">
                     {getStatusIcon()}
                     <span className="text-xs text-gray-500">
-                      {apiStatus.status === 'connected' && 'API 已连接'}
-                      {apiStatus.status === 'error' && 'API 连接失败'}
+                      {apiStatus.status === 'connected' && 'Mastra 已连接'}
+                      {apiStatus.status === 'error' && 'Mastra 连接失败'}
                       {apiStatus.status === 'checking' && '检测中...'}
                     </span>
                   </div>
@@ -241,6 +271,13 @@ const TravelPlanningChat: React.FC = () => {
               </div>
             </div>
             <div className="flex space-x-2">
+              <button
+                onClick={() => setShowDebugInfo(!showDebugInfo)}
+                className="bg-purple-500 text-white px-3 py-2 rounded-lg hover:bg-purple-600 transition-all duration-200 flex items-center space-x-1 text-sm"
+              >
+                <Wrench className="w-4 h-4" />
+                <span>调试信息</span>
+              </button>
               <button
                 onClick={testAPIConnection}
                 className="bg-gray-500 text-white px-3 py-2 rounded-lg hover:bg-gray-600 transition-all duration-200 flex items-center space-x-1 text-sm"
@@ -259,6 +296,75 @@ const TravelPlanningChat: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Debug Info Panel */}
+      {showDebugInfo && debugInfo && (
+        <div className="bg-gray-100 border-b border-gray-300">
+          <div className="max-w-4xl mx-auto px-4 py-4">
+            <div className="bg-white rounded-lg p-4">
+              <h3 className="text-lg font-semibold mb-3 flex items-center">
+                <Wrench className="w-5 h-5 mr-2 text-purple-500" />
+                Mastra API 调试信息
+              </h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Connection Info */}
+                <div className="space-y-2">
+                  <h4 className="font-medium text-gray-700">连接状态</h4>
+                  <div className="text-sm text-gray-600 space-y-1">
+                    <div>✅ 状态: {debugInfo.connection.success ? '已连接' : '连接失败'}</div>
+                    <div>🌐 URL: {debugInfo.connection.details?.baseUrl}</div>
+                    {debugInfo.connection.details?.travelAgent && (
+                      <div>🗺️ 旅游 Agent: {debugInfo.connection.details.travelAgent}</div>
+                    )}
+                    {debugInfo.connection.details?.error && (
+                      <div className="text-red-600">❌ 错误: {debugInfo.connection.details.error}</div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Available Services */}
+                <div className="space-y-2">
+                  <h4 className="font-medium text-gray-700">可用服务</h4>
+                  <div className="text-sm text-gray-600 space-y-1">
+                    <div>🤖 Agents: {debugInfo.agents.length} 个</div>
+                    <div>🔧 Tools: {debugInfo.tools.length} 个</div>
+                    <div>⚙️ Workflows: {debugInfo.workflows.length} 个</div>
+                  </div>
+                </div>
+
+                {/* Available Agents */}
+                {debugInfo.agents.length > 0 && (
+                  <div className="space-y-2">
+                    <h4 className="font-medium text-gray-700">可用 Agents</h4>
+                    <div className="text-sm text-gray-600 max-h-32 overflow-y-auto">
+                      {debugInfo.agents.map((agent: any, index: number) => (
+                        <div key={index} className="truncate">
+                          • {agent.id || agent.name || `Agent ${index + 1}`}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Available Tools */}
+                {debugInfo.tools.length > 0 && (
+                  <div className="space-y-2">
+                    <h4 className="font-medium text-gray-700">可用工具</h4>
+                    <div className="text-sm text-gray-600 max-h-32 overflow-y-auto">
+                      {debugInfo.tools.map((tool: any, index: number) => (
+                        <div key={index} className="truncate">
+                          • {tool.id || tool.name || `Tool ${index + 1}`}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Quick Planning Form */}
       {showForm && (
@@ -432,7 +538,7 @@ const TravelPlanningChat: React.FC = () => {
                 </div>
                 <div className="flex items-center space-x-2">
                   <LoaderIcon className="w-4 h-4 animate-spin text-blue-500" />
-                  <span className="text-gray-600">正在为您规划专属旅游路线...</span>
+                  <span className="text-gray-600">正在通过 Mastra SDK 为您规划专属旅游路线...</span>
                 </div>
               </div>
             </div>
