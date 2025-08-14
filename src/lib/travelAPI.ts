@@ -54,10 +54,10 @@ class TravelAPIService {
   private baseUrl: string;
   
   constructor() {
-    // 从环境变量获取 recodeAgent API 地址
+    // 从环境变量获取 recodeAgent API 地址，统一使用 agent.juzhiqiang.shop
     this.baseUrl = import.meta.env.VITE_RECODE_AGENT_API_URL || 
                    import.meta.env.VITE_MASTRA_API_URL || 
-                   'https://hello-mastra.juzhiqiang.workers.dev';
+                   'https://agent.juzhiqiang.shop';
   }
 
   /**
