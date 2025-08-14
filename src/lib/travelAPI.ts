@@ -3,7 +3,44 @@
  * 使用 @mastra/client-js 与 recodeAgent 项目中的旅游 agent 进行交互
  */
 
-import { MastraClient } from '@mastra/client-js';
+// 尝试不同的导入方式来兼容不同版本的 @mastra/client-js
+let MastraClient: any;
+
+try {
+  // 尝试具名导入
+  const mastraModule = require('@mastra/client-js');
+  MastraClient = mastraModule.MastraClient || mastraModule.default || mastraModule;
+} catch (error) {
+  try {
+    // 尝试默认导入
+    MastraClient = require('@mastra/client-js').default;
+  } catch (error2) {
+    // 如果都失败了，创建一个 fallback
+    console.warn('Failed to import @mastra/client-js, using fallback implementation');
+    MastraClient = class FallbackMastraClient {
+      constructor(config: any) {
+        this.baseUrl = config.baseUrl;
+      }
+      
+      baseUrl: string;
+      
+      agents = {
+        list: async () => [],
+        run: async (params: any) => ({ content: '暂时无法连接到 Mastra 服务', text: '暂时无法连接到 Mastra 服务' })
+      };
+      
+      tools = {
+        list: async () => [],
+        run: async (params: any) => ({ result: null })
+      };
+      
+      workflows = {
+        list: async () => [],
+        run: async (params: any) => ({ result: null })
+      };
+    };
+  }
+}
 
 export interface TravelRouteRequest {
   destinations: string[];
@@ -53,8 +90,9 @@ export interface TravelChatResponse {
 }
 
 class TravelAPIService {
-  private mastraClient: MastraClient;
+  private mastraClient: any;
   private baseUrl: string;
+  private usingFallback: boolean = false;
   
   constructor() {
     // 从环境变量获取 API 地址
@@ -62,10 +100,16 @@ class TravelAPIService {
                    import.meta.env.VITE_MASTRA_API_URL || 
                    'https://agent.juzhiqiang.shop';
     
-    // 初始化 Mastra 客户端
-    this.mastraClient = new MastraClient({
-      baseUrl: this.baseUrl,
-    });
+    try {
+      // 初始化 Mastra 客户端
+      this.mastraClient = new MastraClient({
+        baseUrl: this.baseUrl,
+      });
+    } catch (error) {
+      console.warn('Failed to initialize MastraClient, using fallback', error);
+      this.usingFallback = true;
+      this.mastraClient = new MastraClient({ baseUrl: this.baseUrl });
+    }
   }
 
   /**
@@ -75,6 +119,10 @@ class TravelAPIService {
   async planTravelRoute(request: TravelRouteRequest): Promise<TravelRouteResponse> {
     try {
       console.log('Calling travel route tool with request:', request);
+      
+      if (this.usingFallback) {
+        return this.createMockTravelRoute(request);
+      }
       
       // 使用 Mastra SDK 调用工具
       const result = await this.mastraClient.tools.run({
@@ -97,6 +145,12 @@ class TravelAPIService {
   async chatWithTravelAgent(request: TravelChatRequest): Promise<TravelChatResponse> {
     try {
       console.log('Calling travel agent with request:', request);
+      
+      if (this.usingFallback) {
+        return {
+          content: this.createMockTravelPlan(request.messages[request.messages.length - 1].content)
+        };
+      }
       
       // 使用 Mastra SDK 调用 agent
       const result = await this.mastraClient.agents.run({
@@ -131,6 +185,19 @@ class TravelAPIService {
   }> {
     try {
       console.log('Calling travel workflow with request:', request);
+      
+      if (this.usingFallback) {
+        const mockRoute = this.createMockTravelRoute(request);
+        return {
+          itinerary: this.formatTravelRouteToText(mockRoute),
+          routeSummary: {
+            totalDestinations: mockRoute.route.length,
+            totalDistance: mockRoute.totalDistance,
+            totalDuration: mockRoute.totalDuration,
+            estimatedBudget: mockRoute.estimatedBudget
+          }
+        };
+      }
       
       // 使用 Mastra SDK 调用工作流
       const result = await this.mastraClient.workflows.run({
@@ -186,6 +253,89 @@ ${input.startLocation ? '出发地：' + input.startLocation : ''}`;
       console.error('Smart travel planning error:', error);
       throw this.createFallbackError(error);
     }
+  }
+
+  /**
+   * 创建模拟的旅游路线（用于 fallback）
+   */
+  private createMockTravelRoute(request: TravelRouteRequest): TravelRouteResponse {
+    const destinations = request.destinations || ['未知目的地'];
+    const duration = request.duration || 7;
+    const style = request.travelStyle || 'comfort';
+    
+    const route: TravelDestination[] = destinations.map((dest, index) => ({
+      name: dest,
+      latitude: 0,
+      longitude: 0,
+      country: '未知',
+      order: index + 1,
+      recommendedDays: Math.ceil(duration / destinations.length),
+      attractions: [`${dest}的著名景点1`, `${dest}的著名景点2`, `${dest}的著名景点3`],
+      transportation: style === 'luxury' ? '头等舱' : style === 'budget' ? '公共交通' : '高铁',
+      estimatedCost: this.getEstimatedCostByStyle(style),
+      description: `${dest}是一个美丽的旅游目的地，拥有丰富的文化和自然景观。`
+    }));
+    
+    return {
+      route,
+      totalDistance: destinations.length * 500,
+      totalDuration: duration,
+      estimatedBudget: this.getEstimatedBudgetByStyle(style, duration),
+      bestTravelTime: '春秋两季',
+      tips: [
+        '提前预订住宿和交通工具可以获得更好的价格',
+        '建议购买旅行保险',
+        '准备好相关证件和签证',
+        '了解当地的文化和习俗'
+      ]
+    };
+  }
+
+  /**
+   * 创建模拟的旅游规划文本
+   */
+  private createMockTravelPlan(input: string): string {
+    return `# 🗺️ 您的旅游规划
+
+基于您的需求："${input}"
+
+由于当前无法连接到 Mastra 服务，这里提供一个基础的旅游建议：
+
+## 📋 规划建议
+
+1. **确定目的地**: 根据您的兴趣选择合适的目的地
+2. **制定预算**: 根据旅行风格估算费用
+3. **安排时间**: 合理分配各个景点的游览时间
+4. **预订服务**: 提前预订机票、酒店等服务
+
+## 💡 实用建议
+
+- 📱 下载相关的旅行APP
+- 🗺️ 准备离线地图
+- 💰 了解当地消费水平
+- 🎒 准备合适的行李
+
+请稍后重试，或联系技术支持获得完整的智能旅游规划服务。`;
+  }
+
+  private getEstimatedCostByStyle(style: string): string {
+    switch (style) {
+      case 'budget': return '¥200-300/天';
+      case 'comfort': return '¥500-800/天';
+      case 'luxury': return '¥1200-2600/天';
+      default: return '¥500-800/天';
+    }
+  }
+
+  private getEstimatedBudgetByStyle(style: string, duration: number): string {
+    const costMap = {
+      'budget': [200, 300],
+      'comfort': [500, 800],
+      'luxury': [1200, 2600]
+    };
+    
+    const [min, max] = costMap[style as keyof typeof costMap] || costMap.comfort;
+    return `¥${min * duration} - ¥${max * duration}`;
   }
 
   /**
@@ -275,6 +425,10 @@ ${input.startLocation ? '出发地：' + input.startLocation : ''}`;
    */
   async checkHealth(): Promise<boolean> {
     try {
+      if (this.usingFallback) {
+        return false;
+      }
+      
       // 尝试获取可用的 agents 列表来测试连接
       const agents = await this.mastraClient.agents.list();
       console.log('Available agents:', agents);
@@ -305,6 +459,18 @@ ${input.startLocation ? '出发地：' + input.startLocation : ''}`;
   async testConnection(): Promise<{ success: boolean; message: string; details?: any }> {
     try {
       console.log(`Testing Mastra connection to: ${this.baseUrl}`);
+      
+      if (this.usingFallback) {
+        return {
+          success: false,
+          message: '⚠️ 使用回退模式，@mastra/client-js 导入失败',
+          details: { 
+            baseUrl: this.baseUrl,
+            usingFallback: true,
+            error: 'Failed to import MastraClient'
+          }
+        };
+      }
       
       // 尝试获取可用的 agents 列表
       const agents = await this.mastraClient.agents.list();
@@ -355,6 +521,10 @@ ${input.startLocation ? '出发地：' + input.startLocation : ''}`;
    */
   async getAvailableAgents(): Promise<any[]> {
     try {
+      if (this.usingFallback) {
+        return [{ id: 'fallback', name: 'Fallback Agent' }];
+      }
+      
       const agents = await this.mastraClient.agents.list();
       console.log('Available agents:', agents);
       return agents;
@@ -369,6 +539,10 @@ ${input.startLocation ? '出发地：' + input.startLocation : ''}`;
    */
   async getAvailableTools(): Promise<any[]> {
     try {
+      if (this.usingFallback) {
+        return [{ id: 'fallback', name: 'Fallback Tool' }];
+      }
+      
       const tools = await this.mastraClient.tools.list();
       console.log('Available tools:', tools);
       return tools;
@@ -383,6 +557,10 @@ ${input.startLocation ? '出发地：' + input.startLocation : ''}`;
    */
   async getAvailableWorkflows(): Promise<any[]> {
     try {
+      if (this.usingFallback) {
+        return [{ id: 'fallback', name: 'Fallback Workflow' }];
+      }
+      
       const workflows = await this.mastraClient.workflows.list();
       console.log('Available workflows:', workflows);
       return workflows;
