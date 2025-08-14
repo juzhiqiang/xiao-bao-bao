@@ -1,7 +1,7 @@
 {
   "name": "xiao-bao-bao",
-  "version": "2.1.0",
-  "description": "🤖 小包包 - 豆包风格的AI对话框组件 (React + TypeScript) 支持流式响应与合同审核",
+  "version": "2.2.0",
+  "description": "🤖 小包包 - 豆包风格的AI对话框组件 (React + TypeScript) 支持流式响应、合同审核与旅游规划",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
@@ -27,7 +27,13 @@
     "realtime",
     "流式响应",
     "contract",
-    "review"
+    "review",
+    "travel",
+    "planning",
+    "route",
+    "旅游规划",
+    "路线推荐",
+    "行程安排"
   ],
   "author": "juzhiqiang",
   "license": "MIT",
