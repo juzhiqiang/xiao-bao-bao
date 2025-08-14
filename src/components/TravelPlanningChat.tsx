@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Send, MapPin, Calendar, DollarSign, Plane, LoaderIcon, Info, Star, Clock, Navigation } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { travelAPIService, TravelRouteRequest, validateTravelRequest, formatTravelStyle } from '../lib/travelAPI';
 
 interface TravelPlanningMessage {
   id: string;
@@ -14,27 +15,6 @@ interface TravelPlanningMessage {
     duration?: number;
     budget?: string;
   };
-}
-
-interface TravelRouteResult {
-  route: Array<{
-    name: string;
-    latitude: number;
-    longitude: number;
-    country: string;
-    region?: string;
-    order: number;
-    recommendedDays: number;
-    attractions: string[];
-    transportation: string;
-    estimatedCost: string;
-    description: string;
-  }>;
-  totalDistance: number;
-  totalDuration: number;
-  estimatedBudget: string;
-  bestTravelTime: string;
-  tips: string[];
 }
 
 const TravelPlanningChat: React.FC = () => {
@@ -62,7 +42,7 @@ const TravelPlanningChat: React.FC = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [travelForm, setTravelForm] = useState({
     destinations: '',
-    travelStyle: 'comfort',
+    travelStyle: 'comfort' as 'budget' | 'comfort' | 'luxury',
     duration: 7,
     startLocation: ''
   });
@@ -76,115 +56,31 @@ const TravelPlanningChat: React.FC = () => {
     scrollToBottom();
   }, [messages]);
 
-  const callTravelAPI = async (prompt: string, useForm: boolean = false) => {
-    try {
-      const apiUrl = import.meta.env.VITE_MASTRA_API_URL || 'https://your-mastra-api-url.com';
-      
-      let requestBody;
-      
-      if (useForm) {
-        // 使用表单数据直接调用工具
-        const destinations = travelForm.destinations.split(/[,，、]/).map(d => d.trim()).filter(d => d);
-        requestBody = {
-          tool: 'travelRouteTool',
-          input: {
-            destinations,
-            travelStyle: travelForm.travelStyle,
-            duration: travelForm.duration,
-            startLocation: travelForm.startLocation || undefined
-          }
-        };
-      } else {
-        // 使用对话模式
-        requestBody = {
-          agent: 'travelRouteAgent',
-          messages: [
-            {
-              role: 'user',
-              content: prompt
-            }
-          ]
-        };
-      }
-
-      const response = await fetch(`${apiUrl}/api/chat`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody)
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error('API调用失败:', error);
-      throw error;
-    }
-  };
-
-  const formatTravelRoute = (routeData: TravelRouteResult): string => {
-    let formatted = `# 🗺️ 您的专属旅游路线规划\n\n`;
-    
-    // 路线概览
-    formatted += `## 📋 行程概览\n\n`;
-    formatted += `🎯 **目的地**: ${routeData.route.map(r => r.name).join(' → ')}\n`;
-    formatted += `⏰ **总天数**: ${routeData.totalDuration}天\n`;
-    formatted += `🛣️ **总距离**: ${routeData.totalDistance}公里\n`;
-    formatted += `💰 **预算范围**: ${routeData.estimatedBudget}\n`;
-    formatted += `🌟 **最佳时间**: ${routeData.bestTravelTime}\n\n`;
-
-    // 详细路线
-    formatted += `## 🛤️ 详细路线安排\n\n`;
-    
-    routeData.route.forEach((destination, index) => {
-      formatted += `### 📍 第${destination.order}站：${destination.name}\n\n`;
-      formatted += `**📍 位置**: ${destination.country}${destination.region ? ', ' + destination.region : ''}\n`;
-      formatted += `**⏱️ 建议停留**: ${destination.recommendedDays}天\n`;
-      formatted += `**🚗 交通方式**: ${destination.transportation}\n`;
-      formatted += `**💵 预估花费**: ${destination.estimatedCost}\n\n`;
-      
-      formatted += `**🎯 必游景点**:\n`;
-      destination.attractions.forEach(attraction => {
-        formatted += `- ${attraction}\n`;
-      });
-      formatted += `\n`;
-      
-      formatted += `**📝 目的地介绍**: ${destination.description}\n\n`;
-      
-      if (index < routeData.route.length - 1) {
-        formatted += `---\n\n`;
-      }
-    });
-
-    // 旅行贴士
-    if (routeData.tips.length > 0) {
-      formatted += `## 💡 实用旅行贴士\n\n`;
-      routeData.tips.forEach(tip => {
-        formatted += `- ${tip}\n`;
-      });
-    }
-
-    return formatted;
-  };
-
   const handleSubmit = async (e: React.FormEvent, useFormData: boolean = false) => {
     e.preventDefault();
     
     let messageContent = currentMessage.trim();
     let metadata: any = {};
+    let requestData: TravelRouteRequest | null = null;
     
     if (useFormData) {
       const destinations = travelForm.destinations.split(/[,，、]/).map(d => d.trim()).filter(d => d);
-      if (destinations.length === 0) {
-        alert('请至少输入一个目的地');
+      
+      // 验证表单数据
+      requestData = {
+        destinations,
+        travelStyle: travelForm.travelStyle,
+        duration: travelForm.duration,
+        startLocation: travelForm.startLocation || undefined
+      };
+      
+      const validationErrors = validateTravelRequest(requestData);
+      if (validationErrors.length > 0) {
+        alert(validationErrors.join('\n'));
         return;
       }
       
-      messageContent = `请为我规划一个旅游路线：\n目的地：${destinations.join(', ')}\n旅行风格：${travelForm.travelStyle}\n总天数：${travelForm.duration}天${travelForm.startLocation ? '\n出发地：' + travelForm.startLocation : ''}`;
+      messageContent = `请为我规划一个旅游路线：\n目的地：${destinations.join(', ')}\n旅行风格：${formatTravelStyle(travelForm.travelStyle)}\n总天数：${travelForm.duration}天${travelForm.startLocation ? '\n出发地：' + travelForm.startLocation : ''}`;
       metadata = {
         destinations,
         travelStyle: travelForm.travelStyle,
@@ -192,7 +88,7 @@ const TravelPlanningChat: React.FC = () => {
       };
     }
     
-    if (!messageContent) return;
+    if (!messageContent && !requestData) return;
 
     const userMessage: TravelPlanningMessage = {
       id: Date.now().toString(),
@@ -208,25 +104,20 @@ const TravelPlanningChat: React.FC = () => {
     setIsStreaming(true);
 
     try {
-      const response = await callTravelAPI(messageContent, useFormData);
+      let response;
       
-      let assistantContent = '';
-      
-      if (response.toolResults && response.toolResults.length > 0) {
-        // 处理工具调用结果
-        const toolResult = response.toolResults[0].result;
-        assistantContent = formatTravelRoute(toolResult);
-      } else if (response.content) {
-        // 处理普通对话结果
-        assistantContent = response.content;
+      if (requestData) {
+        // 使用结构化数据调用智能规划 API
+        response = await travelAPIService.smartTravelPlanning(requestData);
       } else {
-        assistantContent = '抱歉，我暂时无法为您规划旅游路线。请稍后再试或提供更具体的信息。';
+        // 使用文本消息调用智能规划 API
+        response = await travelAPIService.smartTravelPlanning(messageContent);
       }
-
+      
       const assistantMessage: TravelPlanningMessage = {
         id: (Date.now() + 1).toString(),
         type: 'assistant',
-        content: assistantContent,
+        content: response.content,
         timestamp: new Date()
       };
 
@@ -248,7 +139,7 @@ const TravelPlanningChat: React.FC = () => {
       const errorMessage: TravelPlanningMessage = {
         id: (Date.now() + 1).toString(),
         type: 'assistant',
-        content: '🚫 抱歉，旅游规划服务暂时不可用。请检查网络连接或稍后再试。\n\n您也可以尝试：\n- 描述更具体的旅游需求\n- 使用快捷选项开始对话\n- 重新发送您的消息',
+        content: error instanceof Error ? error.message : '🚫 抱歉，旅游规划服务暂时不可用。请检查网络连接或稍后再试。\n\n您也可以尝试：\n- 描述更具体的旅游需求\n- 使用快捷选项开始对话\n- 重新发送您的消息',
         timestamp: new Date()
       };
       
@@ -284,7 +175,7 @@ const TravelPlanningChat: React.FC = () => {
   return (
     <div className="flex flex-col h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
       {/* Header */}
-      <div className="bg-white shadow-lg border-b border-blue-100">
+      <div className="bg-white shadow-lg border-b border-blue-100 mt-16">
         <div className="max-w-4xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
@@ -347,7 +238,7 @@ const TravelPlanningChat: React.FC = () => {
                   </label>
                   <select
                     value={travelForm.travelStyle}
-                    onChange={(e) => setTravelForm({...travelForm, travelStyle: e.target.value})}
+                    onChange={(e) => setTravelForm({...travelForm, travelStyle: e.target.value as 'budget' | 'comfort' | 'luxury'})}
                     className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     <option value="budget">🎒 经济型 (¥200-300/天)</option>
