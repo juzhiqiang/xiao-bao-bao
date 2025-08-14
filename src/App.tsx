@@ -1,6 +1,7 @@
 import { Routes, Route } from 'react-router-dom';
 import XiaoBaoBaoStreamingChat from './components/XiaoBaoBaoStreamingChat';
 import ContractReviewChat from './components/ContractReviewChat';
+import TravelPlanningChat from './components/TravelPlanningChat';
 import './index.css';
 
 function App() {
@@ -12,6 +13,9 @@ function App() {
         
         {/* 合同审核路由 */}
         <Route path="/contract-review" element={<ContractReviewChat />} />
+        
+        {/* 旅游规划路由 */}
+        <Route path="/travel-planning" element={<TravelPlanningChat />} />
         
         {/* 404处理 - 重定向到主页 */}
         <Route path="*" element={<XiaoBaoBaoStreamingChat />} />
