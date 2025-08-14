@@ -87,7 +87,7 @@ REACT_APP_MASTRA_BASE_URL=https://agent.juzhiqiang.shop
 VITE_MASTRA_API_URL=https://agent.juzhiqiang.shop
 
 # RecodeAgent API 配置（用于旅游规划功能）- v2.2 新增
-VITE_RECODE_AGENT_API_URL=https://hello-mastra.juzhiqiang.workers.dev
+VITE_RECODE_AGENT_API_URL=https://agent.juzhiqiang.shop
 
 # GraphQL API 配置
 VITE_GRAPHQL_ENDPOINT=https://ai-admin.juzhiqiang.shop
@@ -186,7 +186,7 @@ src/
 - DeepSeek AI - 底层语言模型
 
 ### RecodeAgent Travel API (v2.2 新增)
-集成了专门的旅游规划 API：
+集成了专门的旅游规划 API，统一使用 agent.juzhiqiang.shop：
 - [recodeAgent](https://github.com/juzhiqiang/recodeAgent) - 旅游规划代理服务
 - Travel Route Tool - 智能路线优化算法
 - Geography API - 地理信息和距离计算
@@ -305,8 +305,8 @@ git pull origin main
 npm install
 
 # 3. 更新环境变量
-# 在 .env 文件中新增：
-# VITE_RECODE_AGENT_API_URL=https://hello-mastra.juzhiqiang.workers.dev
+# 在 .env 文件中新增或更新：
+# VITE_RECODE_AGENT_API_URL=https://agent.juzhiqiang.shop
 
 # 4. 启动应用
 npm run dev
@@ -341,6 +341,7 @@ npm run dev
 - 💰 **智能预算**: 根据旅行风格自动估算费用
 - 🎯 **个性化推荐**: 三种旅行风格适应不同需求
 - 📱 **响应式优化**: 移动端旅游规划体验优化
+- 🔄 **API 统一**: 所有功能统一使用 agent.juzhiqiang.shop
 
 ### v2.1.0 (2025-08-13)
 - ✅ **重大升级**: 使用官方 `@mastra/client-js` 替换自定义实现
