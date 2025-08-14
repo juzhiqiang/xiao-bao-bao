@@ -1,431 +1,391 @@
-# 旅游规划模块使用指南
+# 旅游规划功能使用指南
 
-## 概述
+## 🗺️ 功能概述
 
-小包包项目新增了旅游规划功能，通过集成 `recodeAgent` 项目中的旅游 agent，为用户提供智能的旅游路线规划服务。
+旅游规划功能是小包包 (XiaoBaoBao) 项目中的核心模块之一，基于 **@mastra/client-js SDK** 构建，提供智能化、个性化的旅游路线规划服务。
 
-## 功能特点
+### ✨ 核心特性
 
-### 🎯 核心功能
-- **智能路线规划**: 根据地理位置优化旅行路线
-- **个性化推荐**: 支持经济型、舒适型、奢华型三种旅行风格
-- **详细行程安排**: 提供逐日行程和景点推荐
-- **预算估算**: 根据旅行风格估算费用
-- **实用建议**: 提供旅行贴士和注意事项
+- **🤖 基于 Mastra SDK**: 使用官方 @mastra/client-js 进行 AI Agent 集成
+- **🎯 智能路线规划**: 根据目的地和偏好自动优化旅行路线
+- **💰 预算智能估算**: 支持经济型、舒适型、奢华型三种旅行风格
+- **🌍 全球目的地支持**: 涵盖全球主要旅游城市和景点
+- **📱 多种交互方式**: 支持自然语言对话和快捷表单两种规划方式
+- **🔧 完整调试功能**: 内置 API 连接测试和详细调试信息
 
-### 🌍 支持的目的地
-- **欧洲**: 巴黎、伦敦、罗马、巴塞罗那、阿姆斯特丹、布鲁塞尔
-- **亚洲**: 东京、京都、大阪、首尔、新加坡、曼谷
-- **北美**: 纽约、洛杉矶、旧金山、芝加哥、多伦多
-- **中国**: 北京、上海、广州、西安、成都、杭州
+## 🚀 快速开始
 
-## 项目架构
+### 1. 环境配置
 
-### 新增文件
-
-```
-src/
-├── components/
-│   ├── TravelPlanningChat.tsx     # 旅游规划聊天组件
-│   └── Navigation.tsx             # 导航组件
-├── lib/
-│   └── travelAPI.ts              # 旅游 API 服务层
-└── App.tsx                       # 更新的路由配置
-```
-
-### 技术架构
-
-```
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   前端界面      │────│   API 服务层     │────│   recodeAgent   │
-│ TravelPlanning  │    │   travelAPI.ts   │    │   旅游 Agent    │
-│     Chat        │    │                  │    │                 │
-└─────────────────┘    └──────────────────┘    └─────────────────┘
-```
-
-## 使用方法
-
-### 1. 访问旅游规划模块
-
-通过以下方式访问旅游规划功能：
-
-- **URL 直接访问**: `https://your-domain.com/travel-planning`
-- **导航栏切换**: 点击页面顶部的"旅游规划"按钮
-- **路由跳转**: 使用 React Router 导航到 `/travel-planning`
-
-### 2. 快速规划表单
-
-点击"快速规划"按钮，填写以下信息：
-
-```typescript
-interface TravelForm {
-  destinations: string;     // 目的地（逗号分隔）
-  travelStyle: string;      // 旅行风格
-  duration: number;         // 旅行天数
-  startLocation?: string;   // 出发地（可选）
-}
-```
-
-**示例**:
-- 目的地: `巴黎, 伦敦, 罗马`
-- 旅行风格: `舒适型`
-- 旅行天数: `7`
-- 出发地: `北京`
-
-### 3. 自然语言对话
-
-直接在聊天框中输入需求：
-
-**示例输入**:
-- "我想去日本旅游7天，预算充足"
-- "帮我规划一个欧洲三国游，经济实惠一点"
-- "推荐一个美国西海岸的自驾路线"
-
-### 4. 快捷选项
-
-使用预设的快捷选项快速开始对话：
-- 🇪🇺 欧洲三国游（法国-意大利-西班牙）
-- 🇯🇵 日本深度游（东京-京都-大阪）
-- 🇺🇸 美国西海岸（洛杉矶-旧金山-西雅图）
-- 🇨🇳 中国古都游（北京-西安-南京）
-- 🌴 东南亚海岛游（泰国-马来西亚-新加坡）
-- 🏔️ 瑞士阿尔卑斯山区游
-
-## API 集成
-
-### 环境配置
-
-在 `.env` 文件中配置：
+确保在 `.env` 文件中配置了正确的 Mastra API 地址：
 
 ```bash
-# RecodeAgent API Configuration
+# Mastra API 配置 (旅游规划功能)
 VITE_RECODE_AGENT_API_URL=https://agent.juzhiqiang.shop
+VITE_MASTRA_API_URL=https://agent.juzhiqiang.shop
 ```
 
-### API 服务层
+### 2. 基本使用
 
-`src/lib/travelAPI.ts` 提供了完整的 API 服务：
+1. **访问旅游规划页面**: 点击导航栏的"旅游规划"按钮
+2. **选择交互方式**:
+   - **快速规划**: 使用表单快速输入目的地、风格、天数等信息
+   - **自然对话**: 直接描述您的旅游需求，AI 会理解并规划
 
-#### 主要方法
+### 3. 使用示例
 
-```typescript
-// 智能旅游规划（推荐使用）
-await travelAPIService.smartTravelPlanning(input);
-
-// 直接调用路线规划工具
-await travelAPIService.planTravelRoute(request);
-
-// 与旅游 agent 对话
-await travelAPIService.chatWithTravelAgent(request);
-
-// 执行完整工作流
-await travelAPIService.executeTravelWorkflow(request);
+#### 快速规划表单
+```
+目的地: 巴黎, 伦敦, 阿姆斯特丹
+旅行风格: 舒适型
+旅行天数: 10天
+出发地: 北京 (可选)
 ```
 
-#### 数据结构
+#### 自然语言对话
+```
+"我想去欧洲旅游，预算充足，时间大概2周，希望能去法国、意大利和西班牙"
 
-```typescript
-// 请求参数
-interface TravelRouteRequest {
-  destinations: string[];
-  travelStyle?: 'budget' | 'comfort' | 'luxury';
-  duration?: number;
-  startLocation?: string;
-}
+"帮我规划一个日本7日游，我比较喜欢文化古迹，预算中等"
 
-// 响应数据
-interface TravelRouteResponse {
-  route: TravelDestination[];
-  totalDistance: number;
-  totalDuration: number;
-  estimatedBudget: string;
-  bestTravelTime: string;
-  tips: string[];
-}
+"想要一个经济实惠的东南亚行程，10天左右，从广州出发"
 ```
 
-## 旅行风格说明
+## 🎯 旅行风格说明
 
 ### 🎒 经济型 (Budget)
-- **交通**: 公共交通、经济航班
-- **住宿**: 青年旅社、经济型酒店
-- **餐饮**: 当地美食街、市场
-- **预算**: ¥200-300/天
+- **预算范围**: ¥200-300/天
+- **住宿标准**: 青年旅社、经济型酒店
+- **交通方式**: 公共交通、廉价航空
+- **餐饮标准**: 当地小吃、快餐为主
+- **适合人群**: 背包客、学生、预算有限的旅行者
 
 ### 🏨 舒适型 (Comfort)
-- **交通**: 高铁、商务航班
-- **住宿**: 中档酒店、精品民宿
-- **餐饮**: 特色餐厅、当地美食
-- **预算**: ¥500-800/天
+- **预算范围**: ¥500-800/天
+- **住宿标准**: 三星级酒店、精品民宿
+- **交通方式**: 火车、正常航班、偶尔打车
+- **餐饮标准**: 当地特色餐厅、中档餐饮
+- **适合人群**: 普通旅行者、家庭出游、商务休闲
 
 ### 💎 奢华型 (Luxury)
-- **交通**: 头等舱、私人包车
-- **住宿**: 五星级酒店、度假村
-- **餐饮**: 米其林餐厅、私人厨师
-- **预算**: ¥1200-2600/天
+- **预算范围**: ¥1200-2600/天
+- **住宿标准**: 五星级酒店、豪华度假村
+- **交通方式**: 商务舱、头等舱、专车服务
+- **餐饮标准**: 米其林餐厅、高端料理
+- **适合人群**: 高端旅行者、蜜月旅行、商务高管
 
-## 示例输出
+## 🛠️ 技术架构
 
-### 路线规划结果
+### 核心技术栈
 
-```markdown
-# 🗺️ 您的专属旅游路线规划
-
-## 📋 行程概览
-🎯 **目的地**: 巴黎 → 伦敦 → 罗马
-⏰ **总天数**: 7天
-🛣️ **总距离**: 2845公里
-💰 **预算范围**: ¥8,500 - ¥11,050
-🌟 **最佳时间**: 春季和秋季是大多数目的地的最佳旅行时间
-
-## 🛤️ 详细路线安排
-
-### 📍 第1站：巴黎
-**📍 位置**: 法国, 法兰西岛
-**⏱️ 建议停留**: 3天
-**🚗 交通方式**: 商务航班
-**💵 预估花费**: ¥500-750/天
-
-**🎯 必游景点**:
-- 埃菲尔铁塔
-- 卢浮宫
-- 圣母院
-- 香榭丽舍大街
-- 凯旋门
-
-**📝 目的地介绍**: 浪漫之都巴黎，拥有世界级的艺术博物馆、优雅的建筑和美食文化
-
----
-
-### 📍 第2站：伦敦
-**📍 位置**: 英国, 英格兰
-**⏱️ 建议停留**: 2天
-**🚗 交通方式**: 高铁/快车
-**💵 预估花费**: ¥500-750/天
-
-**🎯 必游景点**:
-- 大本钟
-- 白金汉宫
-- 伦敦眼
-- 大英博物馆
-- 塔桥
-
----
-
-### 📍 第3站：罗马
-**📍 位置**: 意大利, 拉齐奥
-**⏱️ 建议停留**: 2天
-**🚗 交通方式**: 商务航班
-**💵 预估花费**: ¥500-750/天
-
-**🎯 必游景点**:
-- 斗兽场
-- 梵蒂冈
-- 特雷维喷泉
-- 万神殿
-- 西班牙阶梯
-
-## 💡 实用旅行贴士
-- 提前预订住宿和交通，可以获得更好的价格
-- 建议购买旅行保险，确保旅途安全
-- 准备好各国的签证和护照，检查有效期
-- 下载离线地图和翻译APP，方便出行
+```typescript
+// 主要依赖
+- @mastra/client-js: 官方 Mastra SDK
+- React + TypeScript: 前端框架
+- Tailwind CSS: 样式框架
+- React Markdown: Markdown 渲染
 ```
 
-## 错误处理
+### API 服务层架构
 
-### 常见错误及处理
-
-1. **网络连接错误**
-   ```
-   🌐 网络连接错误，请检查网络设置或稍后再试
-   ```
-
-2. **服务不可用**
-   ```
-   🔍 旅游规划服务暂时不可用，请稍后再试
-   ```
-
-3. **输入验证错误**
-   ```
-   请至少输入一个目的地
-   目的地数量不能超过10个
-   旅行天数应在1-30天之间
-   ```
-
-### 错误恢复机制
-
-- 自动重试机制
-- 降级到基础功能
-- 用户友好的错误提示
-- 快捷操作建议
-
-## 性能优化
-
-### 前端优化
-- React.memo 优化组件渲染
-- 防抖处理用户输入
-- 虚拟滚动处理长消息列表
-- 图片懒加载
-
-### API 优化
-- 请求缓存机制
-- 智能路由选择
-- 错误重试策略
-- 超时处理
-
-## 开发指南
-
-### 本地开发
-
-1. **克隆项目**
-   ```bash
-   git clone https://github.com/juzhiqiang/xiao-bao-bao.git
-   cd xiao-bao-bao
-   ```
-
-2. **安装依赖**
-   ```bash
-   npm install
-   ```
-
-3. **配置环境变量**
-   ```bash
-   cp .env.example .env
-   # 编辑 .env 文件，配置 API 地址
-   ```
-
-4. **启动开发服务器**
-   ```bash
-   npm run dev
-   ```
-
-5. **访问旅游规划模块**
-   ```
-   http://localhost:3000/travel-planning
-   ```
-
-### 组件使用
-
-```tsx
-import { TravelPlanningChat } from './components';
-
-function App() {
-  return (
-    <div className="App">
-      <TravelPlanningChat />
-    </div>
-  );
-}
+```
+src/lib/travelAPI.ts
+├── TravelAPIService: 主服务类
+├── Mastra Client: SDK 客户端
+├── Agent 调用: travelRouteAgent
+├── Tool 调用: travelRouteTool  
+├── Workflow 调用: travelRouteWorkflow
+└── 错误处理 & 调试功能
 ```
 
-### API 服务使用
+### Mastra SDK 集成
 
-```tsx
-import { travelAPIService } from './lib/travelAPI';
-
-// 使用智能规划服务
-const response = await travelAPIService.smartTravelPlanning({
-  destinations: ['巴黎', '伦敦'],
-  travelStyle: 'comfort',
-  duration: 5
+```typescript
+// 初始化 Mastra 客户端
+const mastraClient = new Mastra({
+  baseUrl: 'https://agent.juzhiqiang.shop'
 });
 
-console.log(response.content);
+// Agent 调用示例
+const result = await mastraClient.agents.run({
+  agentId: 'travelRouteAgent',
+  input: '请为我规划日本7日游'
+});
+
+// Tool 调用示例
+const routeResult = await mastraClient.tools.run({
+  toolId: 'travelRouteTool',
+  input: {
+    destinations: ['东京', '京都', '大阪'],
+    travelStyle: 'comfort',
+    duration: 7
+  }
+});
+
+// Workflow 调用示例
+const workflowResult = await mastraClient.workflows.run({
+  workflowId: 'travelRouteWorkflow',
+  input: { /* 旅游请求数据 */ }
+});
 ```
 
-## 部署配置
+## 🔧 调试功能
 
-### 环境变量
+### 内置调试工具
 
-```bash
-# 生产环境
-VITE_RECODE_AGENT_API_URL=https://agent.juzhiqiang.shop
+旅游规划模块提供了完整的调试功能，帮助开发者和用户诊断问题：
 
-# 开发环境
-VITE_RECODE_AGENT_API_URL=http://localhost:8000
+#### 1. API 连接测试
+- **位置**: 页面右上角"测试连接"按钮
+- **功能**: 检测 Mastra API 连接状态
+- **显示**: 连接状态指示器 (绿色✅/红色❌/黄色🔄)
+
+#### 2. 调试信息面板
+- **位置**: 页面右上角"调试信息"按钮
+- **内容**: 
+  - Mastra API 连接详情
+  - 可用 Agents、Tools、Workflows 列表
+  - 错误信息和诊断建议
+
+#### 3. 系统消息
+- **自动显示**: 连接成功/失败的详细信息
+- **实时更新**: API 状态变化时自动提示
+- **用户友好**: 清晰的错误说明和解决建议
+
+### 调试 API 调用
+
+```typescript
+// 获取可用服务
+const agents = await travelAPIService.getAvailableAgents();
+const tools = await travelAPIService.getAvailableTools();
+const workflows = await travelAPIService.getAvailableWorkflows();
+
+// 测试连接
+const connectionTest = await travelAPIService.testConnection();
+console.log('Connection result:', connectionTest);
+
+// 检查健康状态
+const isHealthy = await travelAPIService.checkHealth();
+console.log('API Health:', isHealthy);
 ```
 
-### 构建部署
+## 📋 API 接口说明
 
-```bash
-npm run build
-npm run deploy
+### 主要接口
+
+#### 1. 智能旅游规划
+```typescript
+// 文本输入
+const response = await travelAPIService.smartTravelPlanning(
+  "我想去日本旅游7天，预算充足"
+);
+
+// 结构化输入
+const response = await travelAPIService.smartTravelPlanning({
+  destinations: ['东京', '京都', '大阪'],
+  travelStyle: 'comfort',
+  duration: 7,
+  startLocation: '北京'
+});
 ```
 
-## 故障排除
+#### 2. Agent 对话
+```typescript
+const response = await travelAPIService.chatWithTravelAgent({
+  messages: [
+    { role: 'user', content: '帮我规划欧洲三国游' }
+  ]
+});
+```
 
-### 常见问题
+#### 3. 路线规划工具
+```typescript
+const routeResult = await travelAPIService.planTravelRoute({
+  destinations: ['巴黎', '伦敦', '罗马'],
+  travelStyle: 'luxury',
+  duration: 14
+});
+```
 
-1. **API 调用失败**
+#### 4. 工作流执行
+```typescript
+const workflowResult = await travelAPIService.executeTravelWorkflow({
+  destinations: ['泰国', '马来西亚', '新加坡'],
+  travelStyle: 'budget',
+  duration: 10
+});
+```
+
+## 🌍 支持的目的地
+
+### 欧洲
+- 法国: 巴黎、尼斯、里昂
+- 英国: 伦敦、爱丁堡、曼彻斯特
+- 意大利: 罗马、佛罗伦萨、威尼斯
+- 西班牙: 巴塞罗那、马德里、塞维利亚
+- 荷兰: 阿姆斯特丹、海牙
+- 比利时: 布鲁塞尔、布鲁日
+
+### 亚洲
+- 日本: 东京、京都、大阪、名古屋
+- 韩国: 首尔、釜山、济州岛
+- 新加坡: 新加坡市
+- 泰国: 曼谷、清迈、普吉岛
+- 马来西亚: 吉隆坡、槟城
+
+### 北美
+- 美国: 纽约、洛杉矶、旧金山、芝加哥、拉斯维加斯
+- 加拿大: 多伦多、温哥华、蒙特利尔
+
+### 中国
+- 一线城市: 北京、上海、广州、深圳
+- 古都: 西安、南京、洛阳
+- 旅游城市: 杭州、成都、厦门、青岛
+
+## 📱 使用技巧
+
+### 1. 最佳实践
+
+**描述需求时包含以下信息**:
+- 🎯 明确的目的地或地区
+- ⏰ 旅行时间长度
+- 💰 预算范围或旅行风格偏好
+- 🏃‍♂️ 旅行节奏 (紧凑/休闲)
+- 🎨 兴趣偏好 (文化/自然/美食/购物)
+
+**示例**:
+```
+"我想去日本关西地区旅游8天，预算中等，比较喜欢传统文化和美食，
+不想行程太紧张，希望有充足时间体验当地生活"
+```
+
+### 2. 快捷操作
+
+- **快速开始**: 使用预设的快捷选项开始对话
+- **表单规划**: 结构化输入获得更精确的规划
+- **实时调整**: 根据 AI 建议进行对话式调整
+- **保存结果**: 复制规划结果进行后续编辑
+
+### 3. 问题排查
+
+**常见问题及解决方案**:
+
+1. **API 连接失败**
    - 检查网络连接
-   - 验证 API 地址配置
-   - 查看浏览器控制台错误
+   - 点击"测试连接"按钮查看详细错误
+   - 查看"调试信息"面板了解服务状态
 
-2. **组件渲染异常**
-   - 检查 React 版本兼容性
-   - 验证依赖安装完整性
-   - 查看开发者工具错误信息
+2. **没有得到预期结果**
+   - 尝试更详细地描述需求
+   - 使用快速规划表单提供结构化输入
+   - 分步骤进行对话，逐步细化需求
 
-3. **路由不工作**
-   - 确认 react-router-dom 版本
-   - 检查路由配置
-   - 验证导航组件设置
+3. **响应时间较长**
+   - 复杂的多城市规划需要更多计算时间
+   - 可以先规划单一目的地，再扩展
+   - 网络状况可能影响响应速度
 
-### 调试技巧
+## 🔄 错误处理
 
-1. **开启详细日志**
-   ```typescript
-   // 在 travelAPI.ts 中开启调试
-   console.log('API Request:', requestData);
-   console.log('API Response:', response);
-   ```
+### 自动错误恢复
 
-2. **网络请求监控**
-   - 使用浏览器开发者工具
-   - 查看 Network 标签页
-   - 检查 API 请求和响应
+系统具备智能的错误恢复机制：
 
-3. **组件状态调试**
-   - 使用 React Developer Tools
-   - 监控组件状态变化
-   - 检查 props 传递
+1. **工具调用失败** → 自动降级到 Agent 对话
+2. **网络超时** → 重试机制和友好提示
+3. **API 错误** → 详细错误信息和解决建议
+4. **输入验证** → 实时表单验证和错误提示
 
-## 版本更新
+### 错误类型说明
 
-### v2.2.0 新功能
-- ✨ 新增旅游规划聊天组件
-- 🗺️ 集成 recodeAgent 旅游 agent
-- 🧭 添加智能导航组件
-- 📱 响应式设计优化
-- 🎨 全新的旅游主题UI
+```typescript
+// 网络错误
+"🌐 网络连接错误，请检查网络设置或稍后再试"
 
-### 兼容性说明
-- React 18+
-- TypeScript 5+
-- Modern browsers (Chrome 90+, Firefox 88+, Safari 14+)
+// 服务不可用
+"🔍 旅游规划服务暂时不可用，请稍后再试"
 
-## 贡献指南
+// 服务器错误
+"⚠️ 服务器内部错误，请稍后再试"
 
-### 代码规范
-- 使用 TypeScript 严格模式
-- 遵循 ESLint 配置
-- 组件使用函数式写法
-- API 调用需要错误处理
-
-### 提交规范
-```bash
-git commit -m "feat(travel): add route optimization algorithm"
-git commit -m "fix(travel): resolve API timeout issue"
-git commit -m "docs(travel): update usage guide"
+// 请求超时
+"⏱️ 请求超时，请稍后再试"
 ```
 
-## 技术支持
+## 📈 性能优化
 
-- **GitHub Issues**: [提交问题](https://github.com/juzhiqiang/xiao-bao-bao/issues)
-- **文档站点**: [完整文档](https://juzhiqiang.github.io/xiao-bao-bao)
-- **示例演示**: [在线演示](https://juzhiqiang.github.io/xiao-bao-bao/travel-planning)
+### 1. 智能路由
+- 根据输入类型自动选择最合适的 API 调用方式
+- 结构化数据优先使用 Tool 调用
+- 自然语言优先使用 Agent 对话
+
+### 2. 缓存机制
+- 常用目的地信息本地缓存
+- API 响应结果适当缓存
+- 减少重复的 API 调用
+
+### 3. 用户体验
+- 实时状态指示器
+- 流式响应显示 (Planning...)
+- 智能错误恢复和降级
+
+## 🚀 未来规划
+
+### v2.3 计划功能
+- **🎫 预订集成**: 集成酒店、机票预订功能
+- **📊 预算跟踪**: 详细的预算分解和跟踪
+- **🗓️ 日程管理**: 精确到小时的行程安排
+- **📱 移动优化**: 响应式设计优化
+- **🌐 多语言**: 支持英文、日文等多语言规划
+
+### 技术改进
+- **⚡ 性能优化**: 更快的响应速度
+- **🔧 工具扩展**: 更多专业旅游工具
+- **🤖 AI 增强**: 更智能的推荐算法
+- **📊 数据分析**: 用户偏好学习和个性化
+
+## 🤝 贡献指南
+
+### 开发环境设置
+
+```bash
+# 1. 克隆项目
+git clone https://github.com/juzhiqiang/xiao-bao-bao.git
+cd xiao-bao-bao
+
+# 2. 安装依赖
+npm install
+
+# 3. 配置环境变量
+cp .env.example .env
+# 编辑 .env 文件，配置 VITE_RECODE_AGENT_API_URL
+
+# 4. 启动开发服务器
+npm run dev
+```
+
+### 代码结构
+
+```
+src/components/TravelPlanningChat.tsx  # 主组件
+src/lib/travelAPI.ts                   # API 服务层
+docs/travel-planning-guide.md          # 使用文档
+```
+
+### 提交代码
+
+1. 遵循现有的代码风格
+2. 添加适当的类型注解
+3. 更新相关文档
+4. 提交前进行充分测试
+
+## 📞 支持与反馈
+
+- **项目地址**: [GitHub Repository](https://github.com/juzhiqiang/xiao-bao-bao)
+- **在线演示**: [旅游规划演示](https://juzhiqiang.github.io/xiao-bao-bao/travel-planning)
+- **问题反馈**: [GitHub Issues](https://github.com/juzhiqiang/xiao-bao-bao/issues)
+- **功能建议**: 欢迎在 Issues 中提出改进建议
 
 ---
 
-🎉 享受您的智能旅游规划体验！
+🌟 **享受您的智能旅游规划体验！** 让 AI 帮您发现世界上最美好的地方！ ✈️🗺️
