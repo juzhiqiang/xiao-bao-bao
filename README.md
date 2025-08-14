@@ -33,6 +33,7 @@
 - **实用建议** - 提供旅行贴士和注意事项
 - **全球目的地** - 支持全球主要旅游城市
 - **自然语言交互** - 通过对话方式规划旅行
+- **完整调试功能** - 内置连接测试和故障排除工具
 
 ### 🎨 界面特性
 - **现代化设计** - 豆包风格的美观界面
@@ -48,7 +49,7 @@
 - **Vite** - 快速的开发和构建工具
 - **Tailwind CSS** - 原子化 CSS 框架
 - **GraphQL** - 高效的数据查询
-- **@mastra/client-js** - 官方 Mastra 客户端集成
+- **@mastra/client-js** - 官方 Mastra 客户端集成，支持 Fallback 模式
 - **Multi-Agent 架构** - 接入多个专业 AI Agent
 
 ## 🚀 快速开始
@@ -133,6 +134,7 @@ yarn build
 详细使用说明请参考：
 - [合同审核功能文档](./docs/CONTRACT_REVIEW.md)
 - [旅游规划功能文档](./docs/travel-planning-guide.md)
+- [故障排除指南](./docs/TROUBLESHOOTING.md) 🆕
 
 ## 🆕 v2.2 升级亮点
 
@@ -145,11 +147,19 @@ yarn build
 - ✅ **实用旅行贴士**: 签证、最佳时间、注意事项提醒
 - ✅ **自然语言交互**: 支持对话式旅游规划
 
-### 架构升级
+### 技术架构升级
 - ✅ **模块化导航**: 新增智能导航组件，快速切换功能
 - ✅ **API 服务层**: 新增 travelAPI.ts 统一管理旅游相关接口
 - ✅ **Multi-Agent 集成**: 同时接入多个专业 AI Agent
 - ✅ **响应式优化**: 针对旅游规划场景优化界面设计
+- ✅ **Fallback 机制**: @mastra/client-js 导入失败时自动启用模拟功能
+- ✅ **完整调试工具**: 内置连接测试、状态监控、故障诊断
+
+### 稳定性改进
+- ✅ **兼容性导入**: 解决 @mastra/client-js 的 TypeScript 导入问题
+- ✅ **错误处理**: 完善的错误恢复和 Fallback 机制
+- ✅ **调试功能**: 实时状态指示器和详细调试信息
+- ✅ **文档完善**: 新增故障排除指南和使用说明
 
 ## 🏗️ 项目结构
 
@@ -168,7 +178,8 @@ src/
 │   └── travelAPI.ts                   # 旅游 API 服务 (v2.2 新增)
 ├── docs/
 │   ├── CONTRACT_REVIEW.md             # 合同审核文档
-│   └── travel-planning-guide.md       # 旅游规划文档 (v2.2 新增)
+│   ├── travel-planning-guide.md       # 旅游规划文档 (v2.2 新增)
+│   └── TROUBLESHOOTING.md             # 故障排除指南 (v2.2 新增)
 ├── App.tsx                            # 路由配置
 ├── main.tsx                           # 应用入口
 └── index.css                          # 全局样式
@@ -207,13 +218,31 @@ await travelAPIService.smartTravelPlanning({
   duration: 7
 });
 
-// 流式响应
-await mastraClient.workflows.stream({
-  workflowId: 'travel-route-workflow',
-  onData: (chunk) => { ... },
-  onComplete: () => { ... }
-});
+// Fallback 模式支持
+// 当 @mastra/client-js 导入失败时，自动启用模拟功能
 ```
+
+## 🔧 故障排除
+
+### 常见问题快速解决
+
+#### 1. @mastra/client-js 导入错误
+✅ **已修复**: 系统已添加 Fallback 机制，导入失败时自动使用模拟功能
+
+#### 2. API 连接失败 (404 错误) 
+✅ **已修复**: 改用 @mastra/client-js SDK 而非直接 REST 调用
+
+#### 3. 旅游规划功能无响应
+- 点击页面右上角"测试连接"按钮检查状态
+- 查看"调试信息"面板了解详细状态
+- 即使 API 不可用，Fallback 模式仍提供基本功能
+
+### 调试工具
+- **连接状态指示器**: 🟢 正常 / 🔴 失败 / 🟡 检测中
+- **测试连接按钮**: 手动检测 API 连接状态
+- **调试信息面板**: 显示详细的服务状态和错误信息
+
+详细故障排除指南请参考：[TROUBLESHOOTING.md](./docs/TROUBLESHOOTING.md)
 
 ## 🎨 自定义主题
 
@@ -342,6 +371,8 @@ npm run dev
 - 🎯 **个性化推荐**: 三种旅行风格适应不同需求
 - 📱 **响应式优化**: 移动端旅游规划体验优化
 - 🔄 **API 统一**: 所有功能统一使用 agent.juzhiqiang.shop
+- 🛡️ **稳定性改进**: Fallback 机制、错误处理、调试工具
+- 📚 **文档完善**: 新增故障排除指南和详细使用说明
 
 ### v2.1.0 (2025-08-13)
 - ✅ **重大升级**: 使用官方 `@mastra/client-js` 替换自定义实现
@@ -420,9 +451,12 @@ npm run dev
 - 功能文档: 
   - [旅游规划指南](./docs/travel-planning-guide.md)
   - [合同审核指南](./docs/CONTRACT_REVIEW.md)
+  - [故障排除指南](./docs/TROUBLESHOOTING.md) 🆕
 
 ---
 
 ⭐ 如果这个项目对你有帮助，请给它一个星标！
 
 🌟 现在支持智能旅游规划，让AI帮你规划完美的旅行路线！
+
+💡 遇到问题？查看我们的[故障排除指南](./docs/TROUBLESHOOTING.md)快速解决！
