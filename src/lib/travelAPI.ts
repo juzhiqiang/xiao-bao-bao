@@ -54,7 +54,7 @@ class TravelAPIService {
   private baseUrl: string;
   
   constructor() {
-    // 从环境变量获取 recodeAgent API 地址，统一使用 agent.juzhiqiang.shop
+    // 从环境变量获取 recodeAgent API 地址
     this.baseUrl = import.meta.env.VITE_RECODE_AGENT_API_URL || 
                    import.meta.env.VITE_MASTRA_API_URL || 
                    'https://agent.juzhiqiang.shop';
@@ -62,16 +62,19 @@ class TravelAPIService {
 
   /**
    * 直接调用旅游路线规划工具
+   * 使用正确的 Mastra 工具调用格式
    */
   async planTravelRoute(request: TravelRouteRequest): Promise<TravelRouteResponse> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/tools/travel-route-tool`, {
+      // 使用 Mastra 工具调用格式
+      const response = await fetch(`${this.baseUrl}/api/tools/run`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
         body: JSON.stringify({
+          toolId: 'travelRouteTool',
           input: request
         })
       });
@@ -90,16 +93,21 @@ class TravelAPIService {
 
   /**
    * 通过旅游 agent 进行对话
+   * 使用正确的 Mastra agent 调用格式
    */
   async chatWithTravelAgent(request: TravelChatRequest): Promise<TravelChatResponse> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/agents/travel-route-agent`, {
+      // 使用 Mastra agent 调用格式
+      const response = await fetch(`${this.baseUrl}/api/agents/run`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
-        body: JSON.stringify(request)
+        body: JSON.stringify({
+          agentId: 'travelRouteAgent',
+          messages: request.messages
+        })
       });
 
       if (!response.ok) {
@@ -107,7 +115,10 @@ class TravelAPIService {
       }
 
       const data = await response.json();
-      return data;
+      return {
+        content: data.content || data.text || '规划完成',
+        toolResults: data.toolResults
+      };
     } catch (error) {
       console.error('Travel agent chat API error:', error);
       throw this.createFallbackError(error);
@@ -116,6 +127,7 @@ class TravelAPIService {
 
   /**
    * 执行旅游规划工作流
+   * 使用正确的 Mastra 工作流调用格式
    */
   async executeTravelWorkflow(request: TravelRouteRequest): Promise<{
     itinerary: string;
@@ -127,13 +139,17 @@ class TravelAPIService {
     };
   }> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/workflows/travel-route-workflow`, {
+      // 使用 Mastra 工作流调用格式
+      const response = await fetch(`${this.baseUrl}/api/workflows/run`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
-        body: JSON.stringify(request)
+        body: JSON.stringify({
+          workflowId: 'travelRouteWorkflow',
+          input: request
+        })
       });
 
       if (!response.ok) {
@@ -160,15 +176,29 @@ class TravelAPIService {
           messages: [{ role: 'user', content: input }]
         });
       } else {
-        // 结构化输入，直接调用工具
-        const routeResult = await this.planTravelRoute(input);
-        return {
-          content: this.formatTravelRouteToText(routeResult),
-          toolResults: [{
-            toolId: 'travelRouteTool',
-            result: routeResult
-          }]
-        };
+        // 结构化输入，优先尝试工具调用
+        try {
+          const routeResult = await this.planTravelRoute(input);
+          return {
+            content: this.formatTravelRouteToText(routeResult),
+            toolResults: [{
+              toolId: 'travelRouteTool',
+              result: routeResult
+            }]
+          };
+        } catch (toolError) {
+          // 如果工具调用失败，降级到 agent 对话
+          console.warn('Tool call failed, falling back to agent chat:', toolError);
+          const fallbackText = `请为我规划一个旅游路线：
+目的地：${input.destinations.join(', ')}
+旅行风格：${this.formatTravelStyleText(input.travelStyle || 'comfort')}
+总天数：${input.duration || 7}天
+${input.startLocation ? '出发地：' + input.startLocation : ''}`;
+          
+          return await this.chatWithTravelAgent({
+            messages: [{ role: 'user', content: fallbackText }]
+          });
+        }
       }
     } catch (error) {
       console.error('Smart travel planning error:', error);
@@ -222,6 +252,18 @@ class TravelAPIService {
     }
 
     return formatted;
+  }
+
+  /**
+   * 格式化旅行风格文本
+   */
+  private formatTravelStyleText(style: string): string {
+    const styleMap = {
+      'budget': '经济型',
+      'comfort': '舒适型',
+      'luxury': '奢华型'
+    };
+    return styleMap[style as keyof typeof styleMap] || '舒适型';
   }
 
   /**
@@ -286,6 +328,43 @@ class TravelAPIService {
       '纽约', '洛杉矶', '旧金山', '芝加哥', '多伦多',
       '北京', '上海', '广州', '西安', '成都', '杭州'
     ];
+  }
+
+  /**
+   * 测试 API 连接
+   */
+  async testConnection(): Promise<{ success: boolean; message: string; details?: any }> {
+    try {
+      console.log(`Testing connection to: ${this.baseUrl}`);
+      
+      // 首先测试基础连接
+      const healthResponse = await fetch(`${this.baseUrl}/api/health`, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+        }
+      });
+
+      if (healthResponse.ok) {
+        return {
+          success: true,
+          message: '✅ API 连接正常',
+          details: { status: healthResponse.status, url: this.baseUrl }
+        };
+      } else {
+        return {
+          success: false,
+          message: `❌ API 健康检查失败 (${healthResponse.status})`,
+          details: { status: healthResponse.status, url: this.baseUrl }
+        };
+      }
+    } catch (error) {
+      return {
+        success: false,
+        message: `❌ 无法连接到 API: ${error instanceof Error ? error.message : '未知错误'}`,
+        details: { error: error instanceof Error ? error.message : error, url: this.baseUrl }
+      };
+    }
   }
 }
 
