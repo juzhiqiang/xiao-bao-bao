@@ -99,7 +99,7 @@ interface TravelForm {
 
 ```bash
 # RecodeAgent API Configuration
-VITE_RECODE_AGENT_API_URL=https://hello-mastra.juzhiqiang.workers.dev
+VITE_RECODE_AGENT_API_URL=https://agent.juzhiqiang.shop
 ```
 
 ### API 服务层
@@ -340,7 +340,7 @@ console.log(response.content);
 
 ```bash
 # 生产环境
-VITE_RECODE_AGENT_API_URL=https://hello-mastra.juzhiqiang.workers.dev
+VITE_RECODE_AGENT_API_URL=https://agent.juzhiqiang.shop
 
 # 开发环境
 VITE_RECODE_AGENT_API_URL=http://localhost:8000
