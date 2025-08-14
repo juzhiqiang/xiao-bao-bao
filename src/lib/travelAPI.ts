@@ -1,7 +1,9 @@
 /**
  * 旅游规划 API 服务
- * 与 recodeAgent 项目中的旅游 agent 进行交互
+ * 使用 @mastra/client-js 与 recodeAgent 项目中的旅游 agent 进行交互
  */
+
+import { Mastra } from '@mastra/client-js';
 
 export interface TravelRouteRequest {
   destinations: string[];
@@ -51,83 +53,72 @@ export interface TravelChatResponse {
 }
 
 class TravelAPIService {
+  private mastraClient: Mastra;
   private baseUrl: string;
   
   constructor() {
-    // 从环境变量获取 recodeAgent API 地址
+    // 从环境变量获取 API 地址
     this.baseUrl = import.meta.env.VITE_RECODE_AGENT_API_URL || 
                    import.meta.env.VITE_MASTRA_API_URL || 
                    'https://agent.juzhiqiang.shop';
+    
+    // 初始化 Mastra 客户端
+    this.mastraClient = new Mastra({
+      baseUrl: this.baseUrl,
+    });
   }
 
   /**
    * 直接调用旅游路线规划工具
-   * 使用正确的 Mastra 工具调用格式
+   * 使用 Mastra SDK 调用工具
    */
   async planTravelRoute(request: TravelRouteRequest): Promise<TravelRouteResponse> {
     try {
-      // 使用 Mastra 工具调用格式
-      const response = await fetch(`${this.baseUrl}/api/tools/run`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: JSON.stringify({
-          toolId: 'travelRouteTool',
-          input: request
-        })
+      console.log('Calling travel route tool with request:', request);
+      
+      // 使用 Mastra SDK 调用工具
+      const result = await this.mastraClient.tools.run({
+        toolId: 'travelRouteTool',
+        input: request
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      return data.result || data;
+      console.log('Tool result:', result);
+      return result as TravelRouteResponse;
     } catch (error) {
-      console.error('Travel route planning API error:', error);
+      console.error('Travel route planning tool error:', error);
       throw this.createFallbackError(error);
     }
   }
 
   /**
    * 通过旅游 agent 进行对话
-   * 使用正确的 Mastra agent 调用格式
+   * 使用 Mastra SDK 调用 agent
    */
   async chatWithTravelAgent(request: TravelChatRequest): Promise<TravelChatResponse> {
     try {
-      // 使用 Mastra agent 调用格式
-      const response = await fetch(`${this.baseUrl}/api/agents/run`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: JSON.stringify({
-          agentId: 'travelRouteAgent',
-          messages: request.messages
-        })
+      console.log('Calling travel agent with request:', request);
+      
+      // 使用 Mastra SDK 调用 agent
+      const result = await this.mastraClient.agents.run({
+        agentId: 'travelRouteAgent',
+        input: request.messages[request.messages.length - 1].content // 获取最后一条用户消息
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
+      console.log('Agent result:', result);
+      
       return {
-        content: data.content || data.text || '规划完成',
-        toolResults: data.toolResults
+        content: result.text || result.content || '规划完成',
+        toolResults: result.toolResults
       };
     } catch (error) {
-      console.error('Travel agent chat API error:', error);
+      console.error('Travel agent chat error:', error);
       throw this.createFallbackError(error);
     }
   }
 
   /**
    * 执行旅游规划工作流
-   * 使用正确的 Mastra 工作流调用格式
+   * 使用 Mastra SDK 调用工作流
    */
   async executeTravelWorkflow(request: TravelRouteRequest): Promise<{
     itinerary: string;
@@ -139,27 +130,18 @@ class TravelAPIService {
     };
   }> {
     try {
-      // 使用 Mastra 工作流调用格式
-      const response = await fetch(`${this.baseUrl}/api/workflows/run`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: JSON.stringify({
-          workflowId: 'travelRouteWorkflow',
-          input: request
-        })
+      console.log('Calling travel workflow with request:', request);
+      
+      // 使用 Mastra SDK 调用工作流
+      const result = await this.mastraClient.workflows.run({
+        workflowId: 'travelRouteWorkflow',
+        input: request
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      return data.result || data;
+      console.log('Workflow result:', result);
+      return result as any;
     } catch (error) {
-      console.error('Travel workflow API error:', error);
+      console.error('Travel workflow error:', error);
       throw this.createFallbackError(error);
     }
   }
@@ -272,12 +254,16 @@ ${input.startLocation ? '出发地：' + input.startLocation : ''}`;
   private createFallbackError(originalError: any): Error {
     const errorMessage = originalError instanceof Error ? originalError.message : '未知错误';
     
-    if (errorMessage.includes('fetch')) {
+    console.error('Original error:', originalError);
+    
+    if (errorMessage.includes('fetch') || errorMessage.includes('network')) {
       return new Error('🌐 网络连接错误，请检查网络设置或稍后再试');
-    } else if (errorMessage.includes('404')) {
+    } else if (errorMessage.includes('404') || errorMessage.includes('Not Found')) {
       return new Error('🔍 旅游规划服务暂时不可用，请稍后再试');
-    } else if (errorMessage.includes('500')) {
+    } else if (errorMessage.includes('500') || errorMessage.includes('Internal Server')) {
       return new Error('⚠️ 服务器内部错误，请稍后再试');
+    } else if (errorMessage.includes('timeout')) {
+      return new Error('⏱️ 请求超时，请稍后再试');
     } else {
       return new Error(`🚫 旅游规划服务遇到问题：${errorMessage}`);
     }
@@ -285,18 +271,16 @@ ${input.startLocation ? '出发地：' + input.startLocation : ''}`;
 
   /**
    * 检查服务健康状态
+   * 使用 Mastra SDK 检查连接
    */
   async checkHealth(): Promise<boolean> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/health`, {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-        }
-      });
-      return response.ok;
+      // 尝试获取可用的 agents 列表来测试连接
+      const agents = await this.mastraClient.agents.list();
+      console.log('Available agents:', agents);
+      return true;
     } catch (error) {
-      console.warn('Travel API health check failed:', error);
+      console.warn('Mastra health check failed:', error);
       return false;
     }
   }
@@ -305,22 +289,6 @@ ${input.startLocation ? '出发地：' + input.startLocation : ''}`;
    * 获取支持的目的地列表
    */
   async getSupportedDestinations(): Promise<string[]> {
-    try {
-      const response = await fetch(`${this.baseUrl}/api/travel/destinations`, {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        return data.destinations || [];
-      }
-    } catch (error) {
-      console.warn('Failed to fetch supported destinations:', error);
-    }
-
     // 返回默认支持的目的地列表
     return [
       '巴黎', '伦敦', '罗马', '巴塞罗那', '阿姆斯特丹', '布鲁塞尔',
@@ -332,38 +300,95 @@ ${input.startLocation ? '出发地：' + input.startLocation : ''}`;
 
   /**
    * 测试 API 连接
+   * 使用 Mastra SDK 进行连接测试
    */
   async testConnection(): Promise<{ success: boolean; message: string; details?: any }> {
     try {
-      console.log(`Testing connection to: ${this.baseUrl}`);
+      console.log(`Testing Mastra connection to: ${this.baseUrl}`);
       
-      // 首先测试基础连接
-      const healthResponse = await fetch(`${this.baseUrl}/api/health`, {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-        }
-      });
-
-      if (healthResponse.ok) {
+      // 尝试获取可用的 agents 列表
+      const agents = await this.mastraClient.agents.list();
+      console.log('Connection test - Available agents:', agents);
+      
+      // 检查是否有旅游相关的 agent
+      const travelAgent = agents.find((agent: any) => 
+        agent.id === 'travelRouteAgent' || agent.name?.includes('travel')
+      );
+      
+      if (travelAgent) {
         return {
           success: true,
-          message: '✅ API 连接正常',
-          details: { status: healthResponse.status, url: this.baseUrl }
+          message: '✅ Mastra API 连接正常，已找到旅游规划 Agent',
+          details: { 
+            baseUrl: this.baseUrl, 
+            agentCount: agents.length,
+            travelAgent: travelAgent.id || travelAgent.name
+          }
         };
       } else {
         return {
           success: false,
-          message: `❌ API 健康检查失败 (${healthResponse.status})`,
-          details: { status: healthResponse.status, url: this.baseUrl }
+          message: '⚠️ Mastra API 连接正常，但未找到旅游规划 Agent',
+          details: { 
+            baseUrl: this.baseUrl, 
+            agentCount: agents.length,
+            availableAgents: agents.map((a: any) => a.id || a.name)
+          }
         };
       }
     } catch (error) {
+      console.error('Mastra connection test failed:', error);
       return {
         success: false,
-        message: `❌ 无法连接到 API: ${error instanceof Error ? error.message : '未知错误'}`,
-        details: { error: error instanceof Error ? error.message : error, url: this.baseUrl }
+        message: `❌ 无法连接到 Mastra API: ${error instanceof Error ? error.message : '未知错误'}`,
+        details: { 
+          error: error instanceof Error ? error.message : error, 
+          baseUrl: this.baseUrl,
+          errorType: error instanceof Error ? error.constructor.name : typeof error
+        }
       };
+    }
+  }
+
+  /**
+   * 获取可用的 Agents 列表
+   */
+  async getAvailableAgents(): Promise<any[]> {
+    try {
+      const agents = await this.mastraClient.agents.list();
+      console.log('Available agents:', agents);
+      return agents;
+    } catch (error) {
+      console.error('Failed to get agents:', error);
+      return [];
+    }
+  }
+
+  /**
+   * 获取可用的工具列表
+   */
+  async getAvailableTools(): Promise<any[]> {
+    try {
+      const tools = await this.mastraClient.tools.list();
+      console.log('Available tools:', tools);
+      return tools;
+    } catch (error) {
+      console.error('Failed to get tools:', error);
+      return [];
+    }
+  }
+
+  /**
+   * 获取可用的工作流列表
+   */
+  async getAvailableWorkflows(): Promise<any[]> {
+    try {
+      const workflows = await this.mastraClient.workflows.list();
+      console.log('Available workflows:', workflows);
+      return workflows;
+    } catch (error) {
+      console.error('Failed to get workflows:', error);
+      return [];
     }
   }
 }
