@@ -1,12 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, MapPin, Calendar, DollarSign, Plane, LoaderIcon, Info, Star, Clock, Navigation } from 'lucide-react';
+import { Send, MapPin, Calendar, DollarSign, Plane, LoaderIcon, Info, Star, Clock, Navigation, AlertCircle, CheckCircle } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { travelAPIService, TravelRouteRequest, validateTravelRequest, formatTravelStyle } from '../lib/travelAPI';
 
 interface TravelPlanningMessage {
   id: string;
-  type: 'user' | 'assistant';
+  type: 'user' | 'assistant' | 'system';
   content: string;
   timestamp: Date;
   metadata?: {
@@ -30,6 +30,7 @@ const TravelPlanningChat: React.FC = () => {
   const [currentMessage, setCurrentMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
+  const [apiStatus, setApiStatus] = useState<{ status: 'unknown' | 'checking' | 'connected' | 'error'; message?: string }>({ status: 'unknown' });
   const [quickActions, setQuickActions] = useState([
     '🇪🇺 欧洲三国游（法国-意大利-西班牙）',
     '🇯🇵 日本深度游（东京-京都-大阪）',
@@ -55,6 +56,39 @@ const TravelPlanningChat: React.FC = () => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // 组件加载时测试 API 连接
+  useEffect(() => {
+    testAPIConnection();
+  }, []);
+
+  const testAPIConnection = async () => {
+    setApiStatus({ status: 'checking', message: '正在检测 API 连接...' });
+    
+    try {
+      const result = await travelAPIService.testConnection();
+      setApiStatus({
+        status: result.success ? 'connected' : 'error',
+        message: result.message
+      });
+      
+      // 如果连接失败，显示调试信息
+      if (!result.success) {
+        const systemMessage: TravelPlanningMessage = {
+          id: Date.now().toString(),
+          type: 'system',
+          content: `⚠️ **API 连接测试**\n\n${result.message}\n\n调试信息：\n- URL: ${result.details?.url}\n- 错误: ${result.details?.error || result.details?.status}\n\n请联系开发者检查服务状态。`,
+          timestamp: new Date()
+        };
+        setMessages(prev => [...prev, systemMessage]);
+      }
+    } catch (error) {
+      setApiStatus({
+        status: 'error',
+        message: `连接测试失败: ${error instanceof Error ? error.message : '未知错误'}`
+      });
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent, useFormData: boolean = false) => {
     e.preventDefault();
@@ -172,6 +206,15 @@ const TravelPlanningChat: React.FC = () => {
     }
   };
 
+  const getStatusIcon = () => {
+    switch (apiStatus.status) {
+      case 'connected': return <CheckCircle className="w-4 h-4 text-green-500" />;
+      case 'error': return <AlertCircle className="w-4 h-4 text-red-500" />;
+      case 'checking': return <LoaderIcon className="w-4 h-4 text-yellow-500 animate-spin" />;
+      default: return <AlertCircle className="w-4 h-4 text-gray-500" />;
+    }
+  };
+
   return (
     <div className="flex flex-col h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
       {/* Header */}
@@ -184,16 +227,35 @@ const TravelPlanningChat: React.FC = () => {
               </div>
               <div>
                 <h1 className="text-xl font-bold text-gray-800">🗺️ 旅游规划助手</h1>
-                <p className="text-sm text-gray-600">为您量身定制完美旅行计划</p>
+                <div className="flex items-center space-x-2">
+                  <p className="text-sm text-gray-600">为您量身定制完美旅行计划</p>
+                  <div className="flex items-center space-x-1">
+                    {getStatusIcon()}
+                    <span className="text-xs text-gray-500">
+                      {apiStatus.status === 'connected' && 'API 已连接'}
+                      {apiStatus.status === 'error' && 'API 连接失败'}
+                      {apiStatus.status === 'checking' && '检测中...'}
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
-            <button
-              onClick={() => setShowForm(!showForm)}
-              className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-4 py-2 rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all duration-200 flex items-center space-x-2"
-            >
-              <Navigation className="w-4 h-4" />
-              <span>快速规划</span>
-            </button>
+            <div className="flex space-x-2">
+              <button
+                onClick={testAPIConnection}
+                className="bg-gray-500 text-white px-3 py-2 rounded-lg hover:bg-gray-600 transition-all duration-200 flex items-center space-x-1 text-sm"
+              >
+                <AlertCircle className="w-4 h-4" />
+                <span>测试连接</span>
+              </button>
+              <button
+                onClick={() => setShowForm(!showForm)}
+                className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-4 py-2 rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all duration-200 flex items-center space-x-2"
+              >
+                <Navigation className="w-4 h-4" />
+                <span>快速规划</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -293,13 +355,25 @@ const TravelPlanningChat: React.FC = () => {
         <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
           {messages.map((message) => (
             <div key={message.id} className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-3xl ${message.type === 'user' ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white' : 'bg-white border border-gray-200'} rounded-2xl p-4 shadow-sm`}>
+              <div className={`max-w-3xl ${
+                message.type === 'user' 
+                  ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white' 
+                  : message.type === 'system'
+                  ? 'bg-yellow-50 border border-yellow-200'
+                  : 'bg-white border border-gray-200'
+              } rounded-2xl p-4 shadow-sm`}>
                 {message.type === 'assistant' && (
                   <div className="flex items-center space-x-2 mb-3">
                     <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
                       <MapPin className="w-5 h-5 text-white" />
                     </div>
                     <span className="font-medium text-gray-800">旅游规划助手</span>
+                  </div>
+                )}
+                {message.type === 'system' && (
+                  <div className="flex items-center space-x-2 mb-3">
+                    <AlertCircle className="w-5 h-5 text-yellow-600" />
+                    <span className="font-medium text-yellow-800">系统信息</span>
                   </div>
                 )}
                 {message.metadata && message.type === 'user' && (
@@ -323,12 +397,24 @@ const TravelPlanningChat: React.FC = () => {
                     </div>
                   </div>
                 )}
-                <div className={`prose prose-sm max-w-none ${message.type === 'user' ? 'prose-invert' : ''}`}>
+                <div className={`prose prose-sm max-w-none ${
+                  message.type === 'user' 
+                    ? 'prose-invert' 
+                    : message.type === 'system'
+                    ? 'prose-yellow'
+                    : ''
+                }`}>
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>
                     {message.content}
                   </ReactMarkdown>
                 </div>
-                <div className={`text-xs ${message.type === 'user' ? 'text-white/70' : 'text-gray-500'} mt-2`}>
+                <div className={`text-xs ${
+                  message.type === 'user' 
+                    ? 'text-white/70' 
+                    : message.type === 'system'
+                    ? 'text-yellow-600'
+                    : 'text-gray-500'
+                } mt-2`}>
                   {message.timestamp.toLocaleTimeString()}
                 </div>
               </div>
