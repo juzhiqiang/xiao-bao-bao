@@ -1,20 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, MapPin, Calendar, DollarSign, Plane, LoaderIcon, Info, Star, Clock, Navigation, AlertCircle, CheckCircle, List, Wrench } from 'lucide-react';
+import { Send, MapPin, LoaderIcon, Info } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { travelAPIService, TravelRouteRequest, validateTravelRequest, formatTravelStyle } from '../lib/travelAPI';
+import { travelAPIService } from '../lib/travelAPI';
 
 interface TravelPlanningMessage {
   id: string;
-  type: 'user' | 'assistant' | 'system';
+  type: 'user' | 'assistant';
   content: string;
   timestamp: Date;
-  metadata?: {
-    destinations?: string[];
-    travelStyle?: string;
-    duration?: number;
-    budget?: string;
-  };
 }
 
 const TravelPlanningChat: React.FC = () => {
@@ -22,18 +16,14 @@ const TravelPlanningChat: React.FC = () => {
     {
       id: '1',
       type: 'assistant',
-      content: '🗺️ 你好！我是您的专属旅游规划助手！✈️\\n\\n我可以帮您：\\n- 🎯 规划多城市旅游路线\\n- 💰 根据预算推荐旅行方案\\n- 🏛️ 推荐必游景点和活动\\n- 🚗 安排最优交通路线\\n- 📅 制定详细行程计划\\n\\n请告诉我您想去的地方，我会为您量身定制完美的旅行计划！',
+      content: '🗺️ 你好！我是您的专属旅游规划助手！✈️\n\n我可以帮您：\n- 🎯 规划多城市旅游路线\n- 💰 根据预算推荐旅行方案\n- 🏛️ 推荐必游景点和活动\n- 🚗 安排最优交通路线\n- 📅 制定详细行程计划\n\n请告诉我您想去的地方，我会为您量身定制完美的旅行计划！',
       timestamp: new Date()
     }
   ]);
   
   const [currentMessage, setCurrentMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [isStreaming, setIsStreaming] = useState(false);
-  const [apiStatus, setApiStatus] = useState<{ status: 'unknown' | 'checking' | 'connected' | 'error'; message?: string }>({ status: 'unknown' });
-  const [showDebugInfo, setShowDebugInfo] = useState(false);
-  const [debugInfo, setDebugInfo] = useState<any>(null);
-  const [quickActions, setQuickActions] = useState([
+  const [quickActions] = useState([
     '🇪🇺 欧洲三国游（法国-意大利-西班牙）',
     '🇯🇵 日本深度游（东京-京都-大阪）',
     '🇺🇸 美国西海岸（洛杉矶-旧金山-西雅图）',
@@ -43,13 +33,6 @@ const TravelPlanningChat: React.FC = () => {
   ]);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [travelForm, setTravelForm] = useState({
-    destinations: '',
-    travelStyle: 'comfort' as 'budget' | 'comfort' | 'luxury',
-    duration: 7,
-    startLocation: ''
-  });
-  const [showForm, setShowForm] = useState(false);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -59,124 +42,25 @@ const TravelPlanningChat: React.FC = () => {
     scrollToBottom();
   }, [messages]);
 
-  // 组件加载时测试 API 连接
-  useEffect(() => {
-    testAPIConnection();
-  }, []);
-
-  const testAPIConnection = async () => {
-    setApiStatus({ status: 'checking', message: '正在检测 Mastra API 连接...' });
-    
-    try {
-      const result = await travelAPIService.testConnection();
-      setApiStatus({
-        status: result.success ? 'connected' : 'error',
-        message: result.message
-      });
-      
-      // 获取调试信息
-      const agents = await travelAPIService.getAvailableAgents();
-      const tools = await travelAPIService.getAvailableTools();
-      const workflows = await travelAPIService.getAvailableWorkflows();
-      
-      setDebugInfo({
-        connection: result,
-        agents,
-        tools,
-        workflows
-      });
-      
-      // 如果连接失败，显示调试信息
-      if (!result.success) {
-        const systemMessage: TravelPlanningMessage = {
-          id: Date.now().toString(),
-          type: 'system',
-          content: `⚠️ **Mastra API 连接测试**\\n\\n${result.message}\\n\\n调试信息：\\n- URL: ${result.details?.baseUrl}\\n- 错误类型: ${result.details?.errorType}\\n- 错误详情: ${result.details?.error}\\n\\n点击右上角的\"调试信息\"按钮查看更多详情。`,
-          timestamp: new Date()
-        };
-        setMessages(prev => [...prev, systemMessage]);
-      } else {
-        // 连接成功，显示可用的服务
-        const systemMessage: TravelPlanningMessage = {
-          id: Date.now().toString(),
-          type: 'system',
-          content: `✅ **Mastra API 连接成功**\\n\\n- 可用 Agents: ${agents.length} 个\\n- 可用工具: ${tools.length} 个\\n- 可用工作流: ${workflows.length} 个\\n\\n${result.details?.travelAgent ? `🗺️ 找到旅游 Agent: ${result.details.travelAgent}` : '⚠️ 未找到专用旅游 Agent'}`,
-          timestamp: new Date()
-        };
-        setMessages(prev => [...prev, systemMessage]);
-      }
-    } catch (error) {
-      setApiStatus({
-        status: 'error',
-        message: `连接测试失败: ${error instanceof Error ? error.message : '未知错误'}`
-      });
-      
-      setDebugInfo({
-        connection: { success: false, error: error instanceof Error ? error.message : error },
-        agents: [],
-        tools: [],
-        workflows: []
-      });
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent, useFormData: boolean = false) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    let messageContent = currentMessage.trim();
-    let metadata: any = {};
-    let requestData: TravelRouteRequest | null = null;
-    
-    if (useFormData) {
-      const destinations = travelForm.destinations.split(/[,，、]/).map(d => d.trim()).filter(d => d);
-      
-      // 验证表单数据
-      requestData = {
-        destinations,
-        travelStyle: travelForm.travelStyle,
-        duration: travelForm.duration,
-        startLocation: travelForm.startLocation || undefined
-      };
-      
-      const validationErrors = validateTravelRequest(requestData);
-      if (validationErrors.length > 0) {
-        alert(validationErrors.join('\\n'));
-        return;
-      }
-      
-      messageContent = `请为我规划一个旅游路线：\\n目的地：${destinations.join(', ')}\\n旅行风格：${formatTravelStyle(travelForm.travelStyle)}\\n总天数：${travelForm.duration}天${travelForm.startLocation ? '\\n出发地：' + travelForm.startLocation : ''}`;
-      metadata = {
-        destinations,
-        travelStyle: travelForm.travelStyle,
-        duration: travelForm.duration
-      };
-    }
-    
-    if (!messageContent && !requestData) return;
+    const messageContent = currentMessage.trim();
+    if (!messageContent) return;
 
     const userMessage: TravelPlanningMessage = {
       id: Date.now().toString(),
       type: 'user',
       content: messageContent,
-      timestamp: new Date(),
-      metadata
+      timestamp: new Date()
     };
 
     setMessages(prev => [...prev, userMessage]);
     setCurrentMessage('');
     setIsLoading(true);
-    setIsStreaming(true);
 
     try {
-      let response;
-      
-      if (requestData) {
-        // 使用结构化数据调用智能规划 API
-        response = await travelAPIService.smartTravelPlanning(requestData);
-      } else {
-        // 使用文本消息调用智能规划 API
-        response = await travelAPIService.smartTravelPlanning(messageContent);
-      }
+      const response = await travelAPIService.smartTravelPlanning(messageContent);
       
       const assistantMessage: TravelPlanningMessage = {
         id: (Date.now() + 1).toString(),
@@ -186,16 +70,6 @@ const TravelPlanningChat: React.FC = () => {
       };
 
       setMessages(prev => [...prev, assistantMessage]);
-      
-      if (useFormData) {
-        setShowForm(false);
-        setTravelForm({
-          destinations: '',
-          travelStyle: 'comfort',
-          duration: 7,
-          startLocation: ''
-        });
-      }
 
     } catch (error) {
       console.error('发送消息失败:', error);
@@ -203,14 +77,13 @@ const TravelPlanningChat: React.FC = () => {
       const errorMessage: TravelPlanningMessage = {
         id: (Date.now() + 1).toString(),
         type: 'assistant',
-        content: error instanceof Error ? error.message : '🚫 抱歉，旅游规划服务暂时不可用。请检查网络连接或稍后再试。\\n\\n您也可以尝试：\\n- 描述更具体的旅游需求\\n- 使用快捷选项开始对话\\n- 重新发送您的消息',
+        content: '🚫 抱歉，旅游规划服务暂时不可用。请检查网络连接或稍后再试。\n\n您也可以尝试：\n- 描述更具体的旅游需求\n- 使用快捷选项开始对话\n- 重新发送您的消息',
         timestamp: new Date()
       };
       
       setMessages(prev => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
-      setIsStreaming(false);
     }
   };
 
@@ -218,243 +91,22 @@ const TravelPlanningChat: React.FC = () => {
     setCurrentMessage(action);
   };
 
-  const getTravelStyleIcon = (style: string) => {
-    switch (style) {
-      case 'budget': return '🎒';
-      case 'comfort': return '🏨';
-      case 'luxury': return '💎';
-      default: return '🏨';
-    }
-  };
-
-  const getTravelStyleText = (style: string) => {
-    switch (style) {
-      case 'budget': return '经济型';
-      case 'comfort': return '舒适型';
-      case 'luxury': return '奢华型';
-      default: return '舒适型';
-    }
-  };
-
-  const getStatusIcon = () => {
-    switch (apiStatus.status) {
-      case 'connected': return <CheckCircle className="w-4 h-4 text-green-500" />;
-      case 'error': return <AlertCircle className="w-4 h-4 text-red-500" />;
-      case 'checking': return <LoaderIcon className="w-4 h-4 text-yellow-500 animate-spin" />;
-      default: return <AlertCircle className="w-4 h-4 text-gray-500" />;
-    }
-  };
-
   return (
     <div className="flex flex-col h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
       {/* Header */}
       <div className="bg-white shadow-lg border-b border-blue-100 mt-16">
         <div className="max-w-4xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-                <MapPin className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-gray-800">🗺️ 旅游规划助手</h1>
-                <div className="flex items-center space-x-2">
-                  <p className="text-sm text-gray-600">基于 Mastra SDK 的智能旅游规划</p>
-                  <div className="flex items-center space-x-1">
-                    {getStatusIcon()}
-                    <span className="text-xs text-gray-500">
-                      {apiStatus.status === 'connected' && 'Mastra 已连接'}
-                      {apiStatus.status === 'error' && 'Mastra 连接失败'}
-                      {apiStatus.status === 'checking' && '检测中...'}
-                    </span>
-                  </div>
-                </div>
-              </div>
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+              <MapPin className="w-6 h-6 text-white" />
             </div>
-            <div className="flex space-x-2">
-              <button
-                onClick={() => setShowDebugInfo(!showDebugInfo)}
-                className="bg-purple-500 text-white px-3 py-2 rounded-lg hover:bg-purple-600 transition-all duration-200 flex items-center space-x-1 text-sm"
-              >
-                <Wrench className="w-4 h-4" />
-                <span>调试信息</span>
-              </button>
-              <button
-                onClick={testAPIConnection}
-                className="bg-gray-500 text-white px-3 py-2 rounded-lg hover:bg-gray-600 transition-all duration-200 flex items-center space-x-1 text-sm"
-              >
-                <AlertCircle className="w-4 h-4" />
-                <span>测试连接</span>
-              </button>
-              <button
-                onClick={() => setShowForm(!showForm)}
-                className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-4 py-2 rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all duration-200 flex items-center space-x-2"
-              >
-                <Navigation className="w-4 h-4" />
-                <span>快速规划</span>
-              </button>
+            <div>
+              <h1 className="text-xl font-bold text-gray-800">🗺️ 旅游规划助手</h1>
+              <p className="text-sm text-gray-600">基于 Mastra SDK 的智能旅游规划</p>
             </div>
           </div>
         </div>
       </div>
-
-      {/* Debug Info Panel */}
-      {showDebugInfo && debugInfo && (
-        <div className="bg-gray-100 border-b border-gray-300">
-          <div className="max-w-4xl mx-auto px-4 py-4">
-            <div className="bg-white rounded-lg p-4">
-              <h3 className="text-lg font-semibold mb-3 flex items-center">
-                <Wrench className="w-5 h-5 mr-2 text-purple-500" />
-                Mastra API 调试信息
-              </h3>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Connection Info */}
-                <div className="space-y-2">
-                  <h4 className="font-medium text-gray-700">连接状态</h4>
-                  <div className="text-sm text-gray-600 space-y-1">
-                    <div>✅ 状态: {debugInfo.connection.success ? '已连接' : '连接失败'}</div>
-                    <div>🌐 URL: {debugInfo.connection.details?.baseUrl}</div>
-                    {debugInfo.connection.details?.travelAgent && (
-                      <div>🗺️ 旅游 Agent: {debugInfo.connection.details.travelAgent}</div>
-                    )}
-                    {debugInfo.connection.details?.error && (
-                      <div className="text-red-600">❌ 错误: {debugInfo.connection.details.error}</div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Available Services */}
-                <div className="space-y-2">
-                  <h4 className="font-medium text-gray-700">可用服务</h4>
-                  <div className="text-sm text-gray-600 space-y-1">
-                    <div>🤖 Agents: {debugInfo.agents.length} 个</div>
-                    <div>🔧 Tools: {debugInfo.tools.length} 个</div>
-                    <div>⚙️ Workflows: {debugInfo.workflows.length} 个</div>
-                  </div>
-                </div>
-
-                {/* Available Agents */}
-                {debugInfo.agents.length > 0 && (
-                  <div className="space-y-2">
-                    <h4 className="font-medium text-gray-700">可用 Agents</h4>
-                    <div className="text-sm text-gray-600 max-h-32 overflow-y-auto">
-                      {debugInfo.agents.map((agent: any, index: number) => (
-                        <div key={index} className="truncate">
-                          • {agent.id || agent.name || `Agent ${index + 1}`}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Available Tools */}
-                {debugInfo.tools.length > 0 && (
-                  <div className="space-y-2">
-                    <h4 className="font-medium text-gray-700">可用工具</h4>
-                    <div className="text-sm text-gray-600 max-h-32 overflow-y-auto">
-                      {debugInfo.tools.map((tool: any, index: number) => (
-                        <div key={index} className="truncate">
-                          • {tool.id || tool.name || `Tool ${index + 1}`}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Quick Planning Form */}
-      {showForm && (
-        <div className="bg-white border-b border-gray-200 shadow-sm">
-          <div className="max-w-4xl mx-auto px-4 py-4">
-            <form onSubmit={(e) => handleSubmit(e, true)} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    <MapPin className="w-4 h-4 inline mr-1" />
-                    目的地（用逗号分隔）
-                  </label>
-                  <input
-                    type="text"
-                    value={travelForm.destinations}
-                    onChange={(e) => setTravelForm({...travelForm, destinations: e.target.value})}
-                    placeholder="例如：巴黎, 伦敦, 罗马"
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    <Plane className="w-4 h-4 inline mr-1" />
-                    出发地（可选）
-                  </label>
-                  <input
-                    type="text"
-                    value={travelForm.startLocation}
-                    onChange={(e) => setTravelForm({...travelForm, startLocation: e.target.value})}
-                    placeholder="例如：北京"
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    <Star className="w-4 h-4 inline mr-1" />
-                    旅行风格
-                  </label>
-                  <select
-                    value={travelForm.travelStyle}
-                    onChange={(e) => setTravelForm({...travelForm, travelStyle: e.target.value as 'budget' | 'comfort' | 'luxury'})}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value="budget">🎒 经济型 (¥200-300/天)</option>
-                    <option value="comfort">🏨 舒适型 (¥500-800/天)</option>
-                    <option value="luxury">💎 奢华型 (¥1200-2600/天)</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    <Clock className="w-4 h-4 inline mr-1" />
-                    旅行天数
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="30"
-                    value={travelForm.duration}
-                    onChange={(e) => setTravelForm({...travelForm, duration: parseInt(e.target.value)})}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    required
-                  />
-                </div>
-              </div>
-              <div className="flex justify-end space-x-3">
-                <button
-                  type="button"
-                  onClick={() => setShowForm(false)}
-                  className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
-                >
-                  取消
-                </button>
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-2 rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
-                >
-                  {isLoading ? (
-                    <LoaderIcon className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Navigation className="w-4 h-4" />
-                  )}
-                  <span>开始规划</span>
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto">
@@ -464,8 +116,6 @@ const TravelPlanningChat: React.FC = () => {
               <div className={`max-w-3xl ${
                 message.type === 'user' 
                   ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white' 
-                  : message.type === 'system'
-                  ? 'bg-yellow-50 border border-yellow-200'
                   : 'bg-white border border-gray-200'
               } rounded-2xl p-4 shadow-sm`}>
                 {message.type === 'assistant' && (
@@ -476,50 +126,15 @@ const TravelPlanningChat: React.FC = () => {
                     <span className="font-medium text-gray-800">旅游规划助手</span>
                   </div>
                 )}
-                {message.type === 'system' && (
-                  <div className="flex items-center space-x-2 mb-3">
-                    <AlertCircle className="w-5 h-5 text-yellow-600" />
-                    <span className="font-medium text-yellow-800">系统信息</span>
-                  </div>
-                )}
-                {message.metadata && message.type === 'user' && (
-                  <div className="mb-3 p-3 bg-white/20 rounded-lg">
-                    <div className="flex flex-wrap gap-2 text-sm">
-                      {message.metadata.destinations && (
-                        <span className="bg-white/30 px-2 py-1 rounded">
-                          📍 {message.metadata.destinations.join(', ')}
-                        </span>
-                      )}
-                      {message.metadata.travelStyle && (
-                        <span className="bg-white/30 px-2 py-1 rounded">
-                          {getTravelStyleIcon(message.metadata.travelStyle)} {getTravelStyleText(message.metadata.travelStyle)}
-                        </span>
-                      )}
-                      {message.metadata.duration && (
-                        <span className="bg-white/30 px-2 py-1 rounded">
-                          ⏰ {message.metadata.duration}天
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                )}
                 <div className={`prose prose-sm max-w-none ${
-                  message.type === 'user' 
-                    ? 'prose-invert' 
-                    : message.type === 'system'
-                    ? 'prose-yellow'
-                    : ''
+                  message.type === 'user' ? 'prose-invert' : ''
                 }`}>
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>
                     {message.content}
                   </ReactMarkdown>
                 </div>
                 <div className={`text-xs ${
-                  message.type === 'user' 
-                    ? 'text-white/70' 
-                    : message.type === 'system'
-                    ? 'text-yellow-600'
-                    : 'text-gray-500'
+                  message.type === 'user' ? 'text-white/70' : 'text-gray-500'
                 } mt-2`}>
                   {message.timestamp.toLocaleTimeString()}
                 </div>
@@ -527,7 +142,7 @@ const TravelPlanningChat: React.FC = () => {
             </div>
           ))}
           
-          {isStreaming && (
+          {isLoading && (
             <div className="flex justify-start">
               <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm">
                 <div className="flex items-center space-x-2 mb-2">
@@ -538,7 +153,7 @@ const TravelPlanningChat: React.FC = () => {
                 </div>
                 <div className="flex items-center space-x-2">
                   <LoaderIcon className="w-4 h-4 animate-spin text-blue-500" />
-                  <span className="text-gray-600">正在通过 Mastra SDK 为您规划专属旅游路线...</span>
+                  <span className="text-gray-600">正在为您规划专属旅游路线...</span>
                 </div>
               </div>
             </div>
@@ -575,7 +190,7 @@ const TravelPlanningChat: React.FC = () => {
       {/* Input */}
       <div className="bg-white border-t border-gray-200">
         <div className="max-w-4xl mx-auto px-4 py-4">
-          <form onSubmit={(e) => handleSubmit(e, false)} className="flex space-x-3">
+          <form onSubmit={handleSubmit} className="flex space-x-3">
             <div className="flex-1 relative">
               <input
                 type="text"
