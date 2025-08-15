@@ -1,17 +1,31 @@
 /**
  * 旅游规划 API 服务
- * 参考 mastraClient.ts 的实现方式，使用正确的 Mastra 客户端调用
+ * 完全参考 mastraClient.ts 的实现方式，使用正确的 Mastra 客户端调用
  */
 
 import { MastraClient } from '@mastra/client-js';
 
+// Mastra客户端配置接口
+interface MastraClientConfig {
+  baseUrl: string;
+  apiKey?: string;
+  retries?: number;
+  backoffMs?: number;
+  maxBackoffMs?: number;
+  headers?: Record<string, string>;
+}
+
+// 旅游请求接口
 export interface TravelRouteRequest {
   destinations: string[];
   travelStyle?: 'budget' | 'comfort' | 'luxury';
   duration?: number;
   startLocation?: string;
+  preferences?: string[];
+  budget?: number;
 }
 
+// 旅游目的地接口
 export interface TravelDestination {
   name: string;
   latitude: number;
@@ -24,8 +38,10 @@ export interface TravelDestination {
   transportation: string;
   estimatedCost: string;
   description: string;
+  tips?: string[];
 }
 
+// 旅游路线响应接口
 export interface TravelRouteResponse {
   route: TravelDestination[];
   totalDistance: number;
@@ -33,141 +49,130 @@ export interface TravelRouteResponse {
   estimatedBudget: string;
   bestTravelTime: string;
   tips: string[];
+  summary: string;
 }
 
+// 旅游消息接口
 export interface TravelAgentMessage {
   role: 'user' | 'assistant';
   content: string;
 }
 
+// 旅游聊天请求接口
 export interface TravelChatRequest {
   messages: TravelAgentMessage[];
+  temperature?: number;
 }
 
+// 旅游聊天响应接口
 export interface TravelChatResponse {
   content: string;
+  success: boolean;
+  data?: any;
+  error?: string;
   toolResults?: Array<{
     toolId: string;
     result: TravelRouteResponse;
   }>;
 }
 
-class TravelAPIService {
-  private mastraClient: MastraClient;
-  private baseUrl: string;
-  private agentId = 'travelRouteAgent';
-  private usingFallback: boolean = false;
+// 环境变量配置 - 参考 mastraClient.ts
+const getBaseUrl = (): string => {
+  return process.env.NEXT_PUBLIC_MASTRA_BASE_URL || 
+         process.env.VITE_MASTRA_API_URL || 
+         "https://agent.juzhiqiang.shop";
+};
+
+// 旅游规划客户端类 - 完全参考 ContractReviewClient 的实现
+export class TravelPlanningClient {
+  private client: MastraClient;
+  private agentId = "travelRouteAgent";
   
-  constructor() {
-    // 从环境变量获取 API 地址
-    this.baseUrl = import.meta.env.VITE_RECODE_AGENT_API_URL || 
-                   import.meta.env.VITE_MASTRA_API_URL || 
-                   'https://agent.juzhiqiang.shop';
+  constructor(config?: Partial<MastraClientConfig>) {
+    const baseUrl = config?.baseUrl || getBaseUrl();
+
+    this.client = new MastraClient({
+      baseUrl,
+      retries: config?.retries || 3,
+      backoffMs: config?.backoffMs || 300,
+      maxBackoffMs: config?.maxBackoffMs || 5000,
+      headers: config?.headers,
+    });
     
-    try {
-      // 初始化 Mastra 客户端 - 参考 mastraClient.ts 的方式
-      this.mastraClient = new MastraClient({
-        baseUrl: this.baseUrl,
-        retries: 3,
-        backoffMs: 300,
-        maxBackoffMs: 5000,
-      });
-      console.log('Mastra client initialized with baseUrl:', this.baseUrl);
-    } catch (error) {
-      console.warn('Failed to initialize MastraClient, using fallback', error);
-      this.usingFallback = true;
-    }
+    console.log('TravelPlanningClient initialized with baseUrl:', baseUrl);
   }
 
   /**
-   * 通过旅游 agent 进行对话
-   * 参考 mastraClient.ts 中 ContractReviewClient.reviewContract 的实现
+   * 旅游规划对话 - 参考 reviewContract 方法
+   * @param messages 对话消息
+   * @param temperature 温度参数（默认0.7，旅游规划需要一定创造性）
+   * @returns 规划结果
    */
-  async chatWithTravelAgent(request: TravelChatRequest): Promise<TravelChatResponse> {
+  async planTravel(
+    messages: TravelAgentMessage[],
+    temperature: number = 0.7
+  ): Promise<TravelChatResponse> {
     try {
-      console.log('Calling travel agent with request:', request);
-      
-      if (this.usingFallback) {
-        return {
-          content: this.createMockTravelPlan(request.messages[request.messages.length - 1].content)
-        };
-      }
-      
       // 构建消息 - 参考 mastraClient.ts 的消息格式
-      const messages = [
-        {
-          role: 'user' as const,
-          content: request.messages[request.messages.length - 1].content
-        }
-      ];
+      const formattedMessages = messages.map(msg => ({
+        role: msg.role as const,
+        content: msg.content,
+      }));
 
       // 获取代理实例并生成响应 - 参考 mastraClient.ts 的实现
-      const agent = this.mastraClient.getAgent(this.agentId);
+      const agent = this.client.getAgent(this.agentId);
       const response = await agent.generate({
-        messages,
-        temperature: 0.7, // 旅游规划需要一定的创造性
+        messages: formattedMessages,
+        temperature,
       });
 
-      console.log('Agent response:', response);
-      
       return {
-        content: response?.content || response?.message || '旅游规划完成',
-        toolResults: response?.toolResults
+        success: true,
+        content: response?.content || response?.message || "旅游规划完成",
+        data: response,
       };
     } catch (error) {
-      console.error('Travel agent chat error:', error);
-      throw this.createFallbackError(error);
+      console.error("Travel planning error:", error);
+      return {
+        success: false,
+        content: "",
+        error: error instanceof Error ? error.message : "旅游规划失败，请稍后重试",
+      };
     }
   }
 
   /**
-   * 流式旅游规划对话
-   * 参考 mastraClient.ts 中 reviewContractStream 的实现
+   * 流式旅游规划对话 - 完全参考 reviewContractStream 方法
+   * @param messages 对话消息
+   * @param temperature 温度参数
+   * @param onChunk 流式数据回调
+   * @param onComplete 完成回调
+   * @param onError 错误回调
    */
-  async chatWithTravelAgentStream(
-    request: TravelChatRequest,
+  async planTravelStream(
+    messages: TravelAgentMessage[],
+    temperature: number = 0.7,
     onChunk: (chunk: string) => void,
     onComplete: (fullResponse: string) => void,
     onError: (error: Error) => void
   ): Promise<void> {
     try {
-      console.log('Starting travel agent stream with request:', request);
-      
-      if (this.usingFallback) {
-        const mockResponse = this.createMockTravelPlan(request.messages[request.messages.length - 1].content);
-        // 模拟流式响应
-        let index = 0;
-        const words = mockResponse.split(' ');
-        const interval = setInterval(() => {
-          if (index < words.length) {
-            onChunk(words[index] + ' ');
-            index++;
-          } else {
-            clearInterval(interval);
-            onComplete(mockResponse);
-          }
-        }, 50);
-        return;
-      }
-
       // 构建消息
-      const messages = [
-        {
-          role: 'user' as const,
-          content: request.messages[request.messages.length - 1].content
-        }
-      ];
+      const formattedMessages = messages.map(msg => ({
+        role: msg.role as const,
+        content: msg.content,
+      }));
 
-      let fullResponse = '';
+      let fullResponse = "";
 
       // 获取代理实例并生成流式响应
-      const agent = this.mastraClient.getAgent(this.agentId);
+      const agent = this.client.getAgent(this.agentId);
       const stream = await agent.stream({
-        messages,
-        temperature: 0.7,
+        messages: formattedMessages,
+        temperature,
       });
 
-      // 处理流式响应 - 参考 mastraClient.ts 的流式处理逻辑
+      // 处理流式响应 - 完全参考 mastraClient.ts 的流式处理逻辑
       if (stream && stream.body) {
         const reader = stream.body.getReader();
 
@@ -179,25 +184,26 @@ class TravelAPIService {
 
             // 处理chunk数据
             const chunk = new TextDecoder().decode(value);
-            const lines = chunk.split('\n');
+            const lines = chunk.split("\\n");
 
             for (const line of lines) {
               if (!line.trim()) continue;
               
-              console.log('Processing line:', line);
+              // 调试日志
+              console.log("Processing line:", line);
               
               // 处理标准SSE格式：data: {...}
-              if (line.startsWith('data: ')) {
+              if (line.startsWith("data: ")) {
                 try {
                   const data = JSON.parse(line.slice(6));
-                  const content = data?.content || data?.delta?.content || '';
+                  const content = data?.content || data?.delta?.content || "";
 
                   if (content) {
                     fullResponse += content;
                     onChunk(content);
                   }
                 } catch (parseError) {
-                  console.warn('Parse SSE data error:', parseError);
+                  console.warn("Parse SSE data error:", parseError);
                 }
               }
               // 处理编号格式：0:"文本"
@@ -211,33 +217,36 @@ class TravelAPIService {
                     if (typeof content === 'string') {
                       fullResponse += content;
                       onChunk(content);
+                      console.log("Parsed content chunk:", content);
                     }
                   }
                 } catch (parseError) {
-                  console.warn('Parse numbered format error:', parseError);
+                  console.warn("Parse numbered format error:", parseError, "Line:", line);
                 }
               }
               // 处理控制信息：f:{...}, e:{...}, d:{...}
-              else if (line.match(/^[a-z]:\{.*\}/)) {
+              else if (line.match(/^[a-z]:\\{.*\\}/)) {
                 try {
                   const prefix = line.charAt(0);
                   const jsonStr = line.slice(2);
                   const data = JSON.parse(jsonStr);
                   
                   if (prefix === 'e') {
-                    console.log('Stream finished:', data);
+                    // 结束信号
+                    console.log("Stream finished:", data);
                   } else if (prefix === 'f') {
-                    console.log('Stream started:', data);
+                    // 开始信号
+                    console.log("Stream started:", data);
                   }
                 } catch (parseError) {
-                  console.warn('Parse control message error:', parseError);
+                  console.warn("Parse control message error:", parseError);
                 }
               }
               // 尝试直接解析为JSON
               else {
                 try {
                   const data = JSON.parse(line);
-                  const content = data?.content || data?.delta?.content || '';
+                  const content = data?.content || data?.delta?.content || "";
                   
                   if (content) {
                     fullResponse += content;
@@ -254,93 +263,202 @@ class TravelAPIService {
             }
           }
 
-          console.log('Stream complete. Full response:', fullResponse);
+          console.log("Stream complete. Full response:", fullResponse);
           onComplete(fullResponse);
         } finally {
           reader.releaseLock();
         }
       } else {
         // 如果没有流式响应，回退到普通模式
-        console.log('No stream body, falling back to regular mode');
-        const response = await this.chatWithTravelAgent(request);
-        fullResponse = response.content;
-        onChunk(response.content);
-        onComplete(fullResponse);
+        console.log("No stream body, falling back to regular mode");
+        const response = await this.planTravel(messages, temperature);
+        if (response.success) {
+          const content = response.content || "规划完成";
+          fullResponse = content;
+          onChunk(content);
+          onComplete(fullResponse);
+        } else {
+          onError(new Error(response.error || "规划失败"));
+        }
       }
     } catch (error) {
-      console.error('Travel agent stream error:', error);
+      console.error("Travel planning stream error:", error);
       
       // 如果流式调用失败，尝试回退到普通模式
       try {
-        console.log('Stream failed, trying fallback...');
-        const response = await this.chatWithTravelAgent(request);
-        onChunk(response.content);
-        onComplete(response.content);
+        console.log("Stream failed, trying fallback...");
+        const response = await this.planTravel(messages, temperature);
+        if (response.success) {
+          const content = response.content || "规划完成";
+          onChunk(content);
+          onComplete(content);
+        } else {
+          onError(new Error(response.error || "规划失败"));
+        }
       } catch (fallbackError) {
-        onError(error instanceof Error ? error : new Error('旅游规划流失败'));
+        onError(error instanceof Error ? error : new Error("旅游规划流失败"));
       }
     }
   }
 
   /**
-   * 直接调用旅游路线规划工具
-   * 如果有专门的工具，可以通过 agent 来调用
+   * 结构化旅游路线规划
+   * @param request 旅游请求
+   * @returns 结构化的旅游路线
    */
   async planTravelRoute(request: TravelRouteRequest): Promise<TravelRouteResponse> {
     try {
-      console.log('Planning travel route with request:', request);
-      
-      if (this.usingFallback) {
-        return this.createMockTravelRoute(request);
-      }
-      
       // 将结构化请求转换为自然语言prompt
       const prompt = this.convertRequestToPrompt(request);
       
       // 通过 agent 生成路线规划
-      const response = await this.chatWithTravelAgent({
-        messages: [{ role: 'user', content: prompt }]
-      });
+      const response = await this.planTravel([
+        { role: 'user', content: prompt }
+      ]);
 
-      // 尝试解析响应中的结构化数据，如果没有则创建模拟数据
+      if (!response.success) {
+        throw new Error(response.error || "路线规划失败");
+      }
+
+      // 尝试解析响应中的结构化数据
       try {
-        // 如果响应包含结构化数据，尝试解析
-        if (response.toolResults && response.toolResults.length > 0) {
-          return response.toolResults[0].result;
+        if (response.data?.toolResults && response.data.toolResults.length > 0) {
+          return response.data.toolResults[0].result;
         }
         
         // 否则基于文本响应创建结构化数据
         return this.parseTextResponseToRoute(response.content, request);
       } catch (parseError) {
-        console.warn('Failed to parse route response, using mock data:', parseError);
-        return this.createMockTravelRoute(request);
+        console.warn('Failed to parse route response, creating default structure:', parseError);
+        return this.createStructuredRouteFromText(response.content, request);
       }
     } catch (error) {
       console.error('Travel route planning error:', error);
-      throw this.createFallbackError(error);
+      throw error;
     }
   }
 
   /**
-   * 通用的智能旅游规划接口
+   * 检查Mastra服务连接状态 - 参考 checkConnection 方法
+   * @returns 连接状态
    */
-  async smartTravelPlanning(input: string | TravelRouteRequest): Promise<TravelChatResponse> {
+  async checkConnection(): Promise<{
+    connected: boolean;
+    error?: string;
+  }> {
     try {
-      if (typeof input === 'string') {
-        // 文本输入，使用 agent 对话
-        return await this.chatWithTravelAgent({
-          messages: [{ role: 'user', content: input }]
-        });
-      } else {
-        // 结构化输入，转换为自然语言然后调用 agent
-        const prompt = this.convertRequestToPrompt(input);
-        return await this.chatWithTravelAgent({
-          messages: [{ role: 'user', content: prompt }]
-        });
-      }
+      // 尝试获取代理实例并发送测试消息来检查连接
+      const agent = this.client.getAgent(this.agentId);
+
+      // 发送一个简单的测试消息
+      await agent.generate({
+        messages: [
+          {
+            role: "user" as const,
+            content: "测试连接",
+          },
+        ],
+        temperature: 0.1,
+      });
+
+      return { connected: true };
     } catch (error) {
-      console.error('Smart travel planning error:', error);
-      throw this.createFallbackError(error);
+      console.error("Connection check failed:", error);
+      return {
+        connected: false,
+        error: error instanceof Error ? error.message : "无法连接到Mastra服务",
+      };
+    }
+  }
+
+  /**
+   * 获取可用的代理列表 - 参考 getAvailableAgents 方法
+   * @returns 代理列表
+   */
+  async getAvailableAgents(): Promise<{
+    success: boolean;
+    agents?: string[];
+    error?: string;
+  }> {
+    try {
+      // 目前返回已知的代理ID
+      return {
+        success: true,
+        agents: [this.agentId, "contractAuditAgent", "weatherAgent"],
+      };
+    } catch (error) {
+      console.error("Get agents error:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "获取代理列表失败",
+      };
+    }
+  }
+
+  /**
+   * 获取代理信息 - 参考 getAgentInfo 方法
+   * @param agentId 代理ID
+   * @returns 代理信息
+   */
+  async getAgentInfo(agentId?: string): Promise<{
+    success: boolean;
+    agent?: any;
+    error?: string;
+  }> {
+    try {
+      const targetAgentId = agentId || this.agentId;
+      const agent = this.client.getAgent(targetAgentId);
+
+      return {
+        success: true,
+        agent: {
+          id: targetAgentId,
+          name: targetAgentId,
+          status: "active",
+          description: "旅游路线规划智能助手",
+        },
+      };
+    } catch (error) {
+      console.error("Get agent info error:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "获取代理信息失败",
+      };
+    }
+  }
+
+  /**
+   * 测试代理功能 - 参考 testAgent 方法
+   * @param testMessage 测试消息
+   * @returns 测试结果
+   */
+  async testAgent(testMessage: string = "你好，我想规划一次旅行"): Promise<{
+    success: boolean;
+    response?: any;
+    error?: string;
+  }> {
+    try {
+      const agent = this.client.getAgent(this.agentId);
+      const response = await agent.generate({
+        messages: [
+          {
+            role: "user" as const,
+            content: testMessage,
+          },
+        ],
+        temperature: 0.7,
+      });
+
+      return {
+        success: true,
+        response,
+      };
+    } catch (error) {
+      console.error("Test agent error:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "代理测试失败",
+      };
     }
   }
 
@@ -348,23 +466,33 @@ class TravelAPIService {
    * 将结构化请求转换为自然语言prompt
    */
   private convertRequestToPrompt(request: TravelRouteRequest): string {
-    const { destinations, travelStyle, duration, startLocation } = request;
+    const { destinations, travelStyle, duration, startLocation, preferences, budget } = request;
     
-    let prompt = `请为我规划一个详细的旅游路线：\n\n`;
-    prompt += `目的地：${destinations.join(', ')}\n`;
-    prompt += `旅行风格：${this.formatTravelStyleText(travelStyle || 'comfort')}\n`;
-    prompt += `总天数：${duration || 7}天\n`;
+    let prompt = `请为我规划一个详细的旅游路线：\\n\\n`;
+    prompt += `🎯 目的地：${destinations.join(', ')}\\n`;
+    prompt += `🎒 旅行风格：${this.formatTravelStyleText(travelStyle || 'comfort')}\\n`;
+    prompt += `⏰ 总天数：${duration || 7}天\\n`;
+    
     if (startLocation) {
-      prompt += `出发地：${startLocation}\n`;
+      prompt += `📍 出发地：${startLocation}\\n`;
     }
     
-    prompt += `\n请提供详细的行程安排，包括：\n`;
-    prompt += `- 每个目的地的推荐天数\n`;
-    prompt += `- 必游景点推荐\n`;
-    prompt += `- 交通方式建议\n`;
-    prompt += `- 预算估算\n`;
-    prompt += `- 最佳旅行时间\n`;
-    prompt += `- 实用旅行贴士\n`;
+    if (budget) {
+      prompt += `💰 预算：${budget}元\\n`;
+    }
+    
+    if (preferences && preferences.length > 0) {
+      prompt += `❤️ 偏好：${preferences.join(', ')}\\n`;
+    }
+    
+    prompt += `\\n请提供详细的行程安排，包括：\\n`;
+    prompt += `- 每个目的地的推荐天数和顺序\\n`;
+    prompt += `- 必游景点推荐\\n`;
+    prompt += `- 交通方式建议\\n`;
+    prompt += `- 预算估算\\n`;
+    prompt += `- 最佳旅行时间\\n`;
+    prompt += `- 实用旅行贴士\\n`;
+    prompt += `- 详细的行程安排\\n`;
     
     return prompt;
   }
@@ -373,20 +501,13 @@ class TravelAPIService {
    * 解析文本响应为路线数据
    */
   private parseTextResponseToRoute(textResponse: string, request: TravelRouteRequest): TravelRouteResponse {
-    // 这里可以添加更复杂的文本解析逻辑
-    // 目前先返回基于请求的模拟数据，并包含AI响应的文本
-    const mockRoute = this.createMockTravelRoute(request);
-    
-    // 将AI响应添加到tips中
-    mockRoute.tips.unshift(`AI 推荐：${textResponse.substring(0, 200)}...`);
-    
-    return mockRoute;
+    return this.createStructuredRouteFromText(textResponse, request);
   }
 
   /**
-   * 创建模拟的旅游路线（用于 fallback）
+   * 从文本创建结构化路线数据
    */
-  private createMockTravelRoute(request: TravelRouteRequest): TravelRouteResponse {
+  private createStructuredRouteFromText(textResponse: string, request: TravelRouteRequest): TravelRouteResponse {
     const destinations = request.destinations || ['未知目的地'];
     const duration = request.duration || 7;
     const style = request.travelStyle || 'comfort';
@@ -395,123 +516,133 @@ class TravelAPIService {
       name: dest,
       latitude: 0,
       longitude: 0,
-      country: '未知',
+      country: '待确定',
       order: index + 1,
       recommendedDays: Math.ceil(duration / destinations.length),
-      attractions: [`${dest}的著名景点1`, `${dest}的著名景点2`, `${dest}的著名景点3`],
-      transportation: style === 'luxury' ? '头等舱' : style === 'budget' ? '公共交通' : '高铁',
+      attractions: this.extractAttractionsFromText(textResponse, dest),
+      transportation: style === 'luxury' ? '头等舱/高级轿车' : style === 'budget' ? '公共交通' : '高铁/经济舱',
       estimatedCost: this.getEstimatedCostByStyle(style),
-      description: `${dest}是一个美丽的旅游目的地，拥有丰富的文化和自然景观。`
+      description: this.extractDescriptionFromText(textResponse, dest),
+      tips: this.extractTipsFromText(textResponse)
     }));
     
     return {
       route,
-      totalDistance: destinations.length * 500,
+      totalDistance: destinations.length * 500, // 估算距离
       totalDuration: duration,
       estimatedBudget: this.getEstimatedBudgetByStyle(style, duration),
-      bestTravelTime: '春秋两季',
-      tips: [
-        '提前预订住宿和交通工具可以获得更好的价格',
-        '建议购买旅行保险',
-        '准备好相关证件和签证',
-        '了解当地的文化和习俗'
-      ]
+      bestTravelTime: this.extractBestTimeFromText(textResponse) || '春秋两季',
+      tips: this.extractTipsFromText(textResponse),
+      summary: this.extractSummaryFromText(textResponse)
     };
   }
 
   /**
-   * 创建模拟的旅游规划文本
+   * 从文本中提取景点信息
    */
-  private createMockTravelPlan(input: string): string {
-    return `# 🗺️ 您的旅游规划
-
-基于您的需求："${input}"
-
-由于当前使用模拟模式，这里提供一个基础的旅游建议：
-
-## 📋 规划建议
-
-1. **确定目的地**: 根据您的兴趣选择合适的目的地
-2. **制定预算**: 根据旅行风格估算费用
-3. **安排时间**: 合理分配各个景点的游览时间
-4. **预订服务**: 提前预订机票、酒店等服务
-
-## 💡 实用建议
-
-- 📱 下载相关的旅行APP
-- 🗺️ 准备离线地图
-- 💰 了解当地消费水平
-- 🎒 准备合适的行李
-
-请稍后重试，或联系技术支持获得完整的智能旅游规划服务。`;
+  private extractAttractionsFromText(text: string, destination: string): string[] {
+    // 简单的文本解析逻辑，可以根据需要改进
+    const defaultAttractions = [`${destination}主要景点1`, `${destination}主要景点2`, `${destination}主要景点3`];
+    
+    // 尝试从文本中提取景点信息
+    const attractionRegex = new RegExp(`${destination}.*?[景点|景区|必游|推荐].*?([\\n。；]|$)`, 'gi');
+    const matches = text.match(attractionRegex);
+    
+    if (matches && matches.length > 0) {
+      return matches.slice(0, 3).map(match => match.trim().substring(0, 50));
+    }
+    
+    return defaultAttractions;
   }
 
+  /**
+   * 从文本中提取描述信息
+   */
+  private extractDescriptionFromText(text: string, destination: string): string {
+    const lines = text.split('\\n');
+    for (const line of lines) {
+      if (line.includes(destination) && line.length > 20) {
+        return line.trim().substring(0, 200);
+      }
+    }
+    return `${destination}是一个美丽的旅游目的地，值得深度游览。`;
+  }
+
+  /**
+   * 从文本中提取贴士
+   */
+  private extractTipsFromText(text: string): string[] {
+    const tips: string[] = [];
+    const tipPatterns = [/贴士[:：]([^\\n]*)/gi, /建议[:：]([^\\n]*)/gi, /注意[:：]([^\\n]*)/gi];
+    
+    for (const pattern of tipPatterns) {
+      const matches = text.match(pattern);
+      if (matches) {
+        tips.push(...matches.slice(0, 3).map(match => match.split(/[:：]/)[1]?.trim()));
+      }
+    }
+    
+    if (tips.length === 0) {
+      return [
+        '提前预订住宿和交通可以获得更好的价格',
+        '建议购买旅行保险',
+        '了解当地的文化和习俗',
+        '准备好相关证件和签证'
+      ];
+    }
+    
+    return tips.filter(tip => tip && tip.length > 5).slice(0, 5);
+  }
+
+  /**
+   * 从文本中提取最佳旅行时间
+   */
+  private extractBestTimeFromText(text: string): string | null {
+    const timeRegex = /[最佳|适合|推荐].*?[时间|季节|月份].*?([^\\n。；]*)/gi;
+    const match = text.match(timeRegex);
+    
+    if (match && match[0]) {
+      return match[0].trim().substring(0, 50);
+    }
+    
+    return null;
+  }
+
+  /**
+   * 从文本中提取摘要
+   */
+  private extractSummaryFromText(text: string): string {
+    const lines = text.split('\\n').filter(line => line.trim().length > 10);
+    if (lines.length > 0) {
+      return lines[0].trim().substring(0, 200);
+    }
+    return '为您精心规划的旅游路线，包含详细的行程安排和实用建议。';
+  }
+
+  /**
+   * 根据旅行风格获取估算费用
+   */
   private getEstimatedCostByStyle(style: string): string {
     switch (style) {
-      case 'budget': return '¥200-300/天';
-      case 'comfort': return '¥500-800/天';
-      case 'luxury': return '¥1200-2600/天';
-      default: return '¥500-800/天';
+      case 'budget': return '¥200-400/天';
+      case 'comfort': return '¥500-1000/天';
+      case 'luxury': return '¥1500-3000/天';
+      default: return '¥500-1000/天';
     }
   }
 
+  /**
+   * 根据旅行风格和天数获取总预算
+   */
   private getEstimatedBudgetByStyle(style: string, duration: number): string {
     const costMap = {
-      'budget': [200, 300],
-      'comfort': [500, 800],
-      'luxury': [1200, 2600]
+      'budget': [200, 400],
+      'comfort': [500, 1000],
+      'luxury': [1500, 3000]
     };
     
     const [min, max] = costMap[style as keyof typeof costMap] || costMap.comfort;
     return `¥${min * duration} - ¥${max * duration}`;
-  }
-
-  /**
-   * 格式化旅游路线为文本
-   */
-  private formatTravelRouteToText(routeData: TravelRouteResponse): string {
-    let formatted = `# 🗺️ 您的专属旅游路线规划\n\n`;
-    
-    // 路线概览
-    formatted += `## 📋 行程概览\n\n`;
-    formatted += `🎯 **目的地**: ${routeData.route.map(r => r.name).join(' → ')}\n`;
-    formatted += `⏰ **总天数**: ${routeData.totalDuration}天\n`;
-    formatted += `🛣️ **总距离**: ${routeData.totalDistance}公里\n`;
-    formatted += `💰 **预算范围**: ${routeData.estimatedBudget}\n`;
-    formatted += `🌟 **最佳时间**: ${routeData.bestTravelTime}\n\n`;
-
-    // 详细路线
-    formatted += `## 🛤️ 详细路线安排\n\n`;
-    
-    routeData.route.forEach((destination, index) => {
-      formatted += `### 📍 第${destination.order}站：${destination.name}\n\n`;
-      formatted += `**📍 位置**: ${destination.country}${destination.region ? ', ' + destination.region : ''}\n`;
-      formatted += `**⏱️ 建议停留**: ${destination.recommendedDays}天\n`;
-      formatted += `**🚗 交通方式**: ${destination.transportation}\n`;
-      formatted += `**💵 预估花费**: ${destination.estimatedCost}\n\n`;
-      
-      formatted += `**🎯 必游景点**:\n`;
-      destination.attractions.forEach(attraction => {
-        formatted += `- ${attraction}\n`;
-      });
-      formatted += `\n`;
-      
-      formatted += `**📝 目的地介绍**: ${destination.description}\n\n`;
-      
-      if (index < routeData.route.length - 1) {
-        formatted += `---\n\n`;
-      }
-    });
-
-    // 旅行贴士
-    if (routeData.tips.length > 0) {
-      formatted += `## 💡 实用旅行贴士\n\n`;
-      routeData.tips.forEach(tip => {
-        formatted += `- ${tip}\n`;
-      });
-    }
-
-    return formatted;
   }
 
   /**
@@ -525,205 +656,23 @@ class TravelAPIService {
     };
     return styleMap[style as keyof typeof styleMap] || '舒适型';
   }
-
-  /**
-   * 创建错误回退响应
-   */
-  private createFallbackError(originalError: any): Error {
-    const errorMessage = originalError instanceof Error ? originalError.message : '未知错误';
-    
-    console.error('Original error:', originalError);
-    
-    if (errorMessage.includes('fetch') || errorMessage.includes('network')) {
-      return new Error('🌐 网络连接错误，请检查网络设置或稍后再试');
-    } else if (errorMessage.includes('404') || errorMessage.includes('Not Found')) {
-      return new Error('🔍 旅游规划服务暂时不可用，请稍后再试');
-    } else if (errorMessage.includes('500') || errorMessage.includes('Internal Server')) {
-      return new Error('⚠️ 服务器内部错误，请稍后再试');
-    } else if (errorMessage.includes('timeout')) {
-      return new Error('⏱️ 请求超时，请稍后再试');
-    } else {
-      return new Error(`🚫 旅游规划服务遇到问题：${errorMessage}`);
-    }
-  }
-
-  /**
-   * 检查服务健康状态
-   * 参考 mastraClient.ts 中 checkConnection 的实现
-   */
-  async checkHealth(): Promise<boolean> {
-    try {
-      if (this.usingFallback) {
-        return false;
-      }
-      
-      // 获取代理实例并发送测试消息来检查连接
-      const agent = this.mastraClient.getAgent(this.agentId);
-
-      // 发送一个简单的测试消息
-      await agent.generate({
-        messages: [
-          {
-            role: 'user' as const,
-            content: '测试连接',
-          },
-        ],
-        temperature: 0.1,
-      });
-
-      return true;
-    } catch (error) {
-      console.warn('Travel API health check failed:', error);
-      return false;
-    }
-  }
-
-  /**
-   * 获取支持的目的地列表
-   */
-  async getSupportedDestinations(): Promise<string[]> {
-    // 返回默认支持的目的地列表
-    return [
-      '巴黎', '伦敦', '罗马', '巴塞罗那', '阿姆斯特丹', '布鲁塞尔',
-      '东京', '京都', '大阪', '首尔', '新加坡', '曼谷',
-      '纽约', '洛杉矶', '旧金山', '芝加哥', '多伦多',
-      '北京', '上海', '广州', '西安', '成都', '杭州'
-    ];
-  }
-
-  /**
-   * 测试 API 连接
-   * 参考 mastraClient.ts 中 testAgent 的实现
-   */
-  async testConnection(): Promise<{ success: boolean; message: string; details?: any }> {
-    try {
-      console.log(`Testing Mastra connection to: ${this.baseUrl}`);
-      
-      if (this.usingFallback) {
-        return {
-          success: false,
-          message: '⚠️ 使用回退模式，Mastra 客户端初始化失败',
-          details: { 
-            baseUrl: this.baseUrl,
-            usingFallback: true,
-            error: 'Failed to initialize MastraClient'
-          }
-        };
-      }
-      
-      // 获取代理实例并发送测试消息
-      const agent = this.mastraClient.getAgent(this.agentId);
-      const response = await agent.generate({
-        messages: [
-          {
-            role: 'user' as const,
-            content: '你好，这是一个连接测试',
-          },
-        ],
-        temperature: 0.1,
-      });
-      
-      console.log('Connection test response:', response);
-      
-      return {
-        success: true,
-        message: '✅ Mastra API 连接正常，旅游规划 Agent 可用',
-        details: { 
-          baseUrl: this.baseUrl, 
-          agentId: this.agentId,
-          response: response?.content || response?.message
-        }
-      };
-    } catch (error) {
-      console.error('Mastra connection test failed:', error);
-      return {
-        success: false,
-        message: `❌ 无法连接到 Mastra API: ${error instanceof Error ? error.message : '未知错误'}`,
-        details: { 
-          error: error instanceof Error ? error.message : error, 
-          baseUrl: this.baseUrl,
-          agentId: this.agentId,
-          errorType: error instanceof Error ? error.constructor.name : typeof error
-        }
-      };
-    }
-  }
-
-  /**
-   * 获取可用的 Agents 列表
-   * 参考 mastraClient.ts 中 getAvailableAgents 的实现
-   */
-  async getAvailableAgents(): Promise<any[]> {
-    try {
-      if (this.usingFallback) {
-        return [{ id: 'fallback', name: 'Fallback Agent' }];
-      }
-      
-      // 目前返回已知的代理ID
-      const agents = [
-        { id: this.agentId, name: 'Travel Route Agent', status: 'active' },
-        { id: 'contractAuditAgent', name: 'Contract Audit Agent', status: 'active' }
-      ];
-      
-      console.log('Available agents:', agents);
-      return agents;
-    } catch (error) {
-      console.error('Failed to get agents:', error);
-      return [];
-    }
-  }
-
-  /**
-   * 获取可用的工具列表
-   */
-  async getAvailableTools(): Promise<any[]> {
-    try {
-      if (this.usingFallback) {
-        return [{ id: 'fallback', name: 'Fallback Tool' }];
-      }
-      
-      // 返回预定义的工具列表
-      const tools = [
-        { id: 'travelRouteTool', name: 'Travel Route Planning Tool', status: 'active' },
-        { id: 'budgetCalculatorTool', name: 'Budget Calculator Tool', status: 'active' }
-      ];
-      
-      console.log('Available tools:', tools);
-      return tools;
-    } catch (error) {
-      console.error('Failed to get tools:', error);
-      return [];
-    }
-  }
-
-  /**
-   * 获取可用的工作流列表
-   */
-  async getAvailableWorkflows(): Promise<any[]> {
-    try {
-      if (this.usingFallback) {
-        return [{ id: 'fallback', name: 'Fallback Workflow' }];
-      }
-      
-      // 返回预定义的工作流列表
-      const workflows = [
-        { id: 'travelRouteWorkflow', name: 'Travel Route Planning Workflow', status: 'active' },
-        { id: 'contractReviewWorkflow', name: 'Contract Review Workflow', status: 'active' }
-      ];
-      
-      console.log('Available workflows:', workflows);
-      return workflows;
-    } catch (error) {
-      console.error('Failed to get workflows:', error);
-      return [];
-    }
-  }
 }
 
-// 导出单例实例
-export const travelAPIService = new TravelAPIService();
+// 创建 Mastra 客户端实例 - 参考 mastraClient.ts 的导出方式
+export const mastraClient = new MastraClient({
+  baseUrl: getBaseUrl(),
+});
 
-// 导出工具函数
+// 导出客户端实例
+export const travelPlanningClient = new TravelPlanningClient();
+
+// 导出默认客户端
+export default travelPlanningClient;
+
+// 导出类型
+export type { MastraClientConfig };
+
+// 便捷函数
 export const formatTravelStyle = (style: string): string => {
   const styleMap = {
     'budget': '🎒 经济型',
@@ -731,15 +680,6 @@ export const formatTravelStyle = (style: string): string => {
     'luxury': '💎 奢华型'
   };
   return styleMap[style as keyof typeof styleMap] || '🏨 舒适型';
-};
-
-export const formatTravelStyleIcon = (style: string): string => {
-  const iconMap = {
-    'budget': '🎒',
-    'comfort': '🏨',
-    'luxury': '💎'
-  };
-  return iconMap[style as keyof typeof iconMap] || '🏨';
 };
 
 export const validateTravelRequest = (request: TravelRouteRequest): string[] => {
@@ -757,5 +697,12 @@ export const validateTravelRequest = (request: TravelRouteRequest): string[] => 
     errors.push('旅行天数应在1-30天之间');
   }
   
+  if (request.budget && request.budget < 0) {
+    errors.push('预算金额不能为负数');
+  }
+  
   return errors;
 };
+
+// 兼容性支持 - 保持与原有API的兼容
+export const travelAPIService = travelPlanningClient;
