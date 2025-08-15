@@ -8,10 +8,10 @@
       // GitHub Pages SPA路由修复
       // 将404重定向回index.html，并保留路径信息
       const segment = window.location.pathname.split('/').slice(2).join('/');
-      if (segment) {
-        window.history.replaceState(null, null, '/xiao-bao-bao/' + '?p=/' + segment);
-      }
-      window.location.replace('/xiao-bao-bao/');
+      // if (segment) {
+      //   window.history.replaceState(null, null, '/xiao-bao-bao/' + '?p=/' + segment);
+      // }
+      // window.location.replace('/xiao-bao-bao/');
     </script>
   </head>
   <body>

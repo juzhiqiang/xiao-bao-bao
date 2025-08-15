@@ -19,6 +19,7 @@ function getBasename(): string {
   
   // 只有GitHub Pages需要使用子路径
   if (hostname === 'juzhiqiang.github.io') {
+    console.log(123)
     return '/xiao-bao-bao';
   }
   
