@@ -22,7 +22,7 @@ const TravelPlanningChat: React.FC = () => {
     {
       id: '1',
       type: 'assistant',
-      content: '🗺️ 你好！我是您的专属旅游规划助手！✈️\n\n我可以帮您：\n- 🎯 规划多城市旅游路线\n- 💰 根据预算推荐旅行方案\n- 🏛️ 推荐必游景点和活动\n- 🚗 安排最优交通路线\n- 📅 制定详细行程计划\n\n请告诉我您想去的地方，我会为您量身定制完美的旅行计划！',
+      content: '🗺️ 你好！我是您的专属旅游规划助手！✈️\\n\\n我可以帮您：\\n- 🎯 规划多城市旅游路线\\n- 💰 根据预算推荐旅行方案\\n- 🏛️ 推荐必游景点和活动\\n- 🚗 安排最优交通路线\\n- 📅 制定详细行程计划\\n\\n请告诉我您想去的地方，我会为您量身定制完美的旅行计划！',
       timestamp: new Date()
     }
   ]);
@@ -91,7 +91,7 @@ const TravelPlanningChat: React.FC = () => {
         const systemMessage: TravelPlanningMessage = {
           id: Date.now().toString(),
           type: 'system',
-          content: `⚠️ **Mastra API 连接测试**\n\n${result.message}\n\n调试信息：\n- URL: ${result.details?.baseUrl}\n- 错误类型: ${result.details?.errorType}\n- 错误详情: ${result.details?.error}\n\n点击右上角的"调试信息"按钮查看更多详情。`,
+          content: `⚠️ **Mastra API 连接测试**\\n\\n${result.message}\\n\\n调试信息：\\n- URL: ${result.details?.baseUrl}\\n- 错误类型: ${result.details?.errorType}\\n- 错误详情: ${result.details?.error}\\n\\n点击右上角的\"调试信息\"按钮查看更多详情。`,
           timestamp: new Date()
         };
         setMessages(prev => [...prev, systemMessage]);
@@ -100,7 +100,7 @@ const TravelPlanningChat: React.FC = () => {
         const systemMessage: TravelPlanningMessage = {
           id: Date.now().toString(),
           type: 'system',
-          content: `✅ **Mastra API 连接成功**\n\n- 可用 Agents: ${agents.length} 个\n- 可用工具: ${tools.length} 个\n- 可用工作流: ${workflows.length} 个\n\n${result.details?.travelAgent ? `🗺️ 找到旅游 Agent: ${result.details.travelAgent}` : '⚠️ 未找到专用旅游 Agent'}`,
+          content: `✅ **Mastra API 连接成功**\\n\\n- 可用 Agents: ${agents.length} 个\\n- 可用工具: ${tools.length} 个\\n- 可用工作流: ${workflows.length} 个\\n\\n${result.details?.travelAgent ? `🗺️ 找到旅游 Agent: ${result.details.travelAgent}` : '⚠️ 未找到专用旅游 Agent'}`,
           timestamp: new Date()
         };
         setMessages(prev => [...prev, systemMessage]);
@@ -140,11 +140,11 @@ const TravelPlanningChat: React.FC = () => {
       
       const validationErrors = validateTravelRequest(requestData);
       if (validationErrors.length > 0) {
-        alert(validationErrors.join('\n'));
+        alert(validationErrors.join('\\n'));
         return;
       }
       
-      messageContent = `请为我规划一个旅游路线：\n目的地：${destinations.join(', ')}\n旅行风格：${formatTravelStyle(travelForm.travelStyle)}\n总天数：${travelForm.duration}天${travelForm.startLocation ? '\n出发地：' + travelForm.startLocation : ''}`;
+      messageContent = `请为我规划一个旅游路线：\\n目的地：${destinations.join(', ')}\\n旅行风格：${formatTravelStyle(travelForm.travelStyle)}\\n总天数：${travelForm.duration}天${travelForm.startLocation ? '\\n出发地：' + travelForm.startLocation : ''}`;
       metadata = {
         destinations,
         travelStyle: travelForm.travelStyle,
@@ -203,7 +203,7 @@ const TravelPlanningChat: React.FC = () => {
       const errorMessage: TravelPlanningMessage = {
         id: (Date.now() + 1).toString(),
         type: 'assistant',
-        content: error instanceof Error ? error.message : '🚫 抱歉，旅游规划服务暂时不可用。请检查网络连接或稍后再试。\n\n您也可以尝试：\n- 描述更具体的旅游需求\n- 使用快捷选项开始对话\n- 重新发送您的消息',
+        content: error instanceof Error ? error.message : '🚫 抱歉，旅游规划服务暂时不可用。请检查网络连接或稍后再试。\\n\\n您也可以尝试：\\n- 描述更具体的旅游需求\\n- 使用快捷选项开始对话\\n- 重新发送您的消息',
         timestamp: new Date()
       };
       
