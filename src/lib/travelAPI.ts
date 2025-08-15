@@ -103,6 +103,109 @@ export class TravelPlanningClient {
   }
 
   /**
+   * 测试连接状态
+   */
+  async testConnection(): Promise<{
+    success: boolean;
+    message: string;
+    details?: {
+      baseUrl: string;
+      travelAgent?: string;
+      errorType?: string;
+      error?: string;
+    };
+  }> {
+    try {
+      const agent = this.client.getAgent(this.agentId);
+      await agent.generate({
+        messages: [{
+          role: "user",
+          content: "测试连接",
+        }],
+        temperature: 0.1,
+      });
+
+      return {
+        success: true,
+        message: "Mastra API 连接成功",
+        details: {
+          baseUrl: getBaseUrl(),
+          travelAgent: this.agentId,
+        }
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: `连接失败: ${error instanceof Error ? error.message : '未知错误'}`,
+        details: {
+          baseUrl: getBaseUrl(),
+          errorType: error instanceof Error ? error.constructor.name : 'UnknownError',
+          error: error instanceof Error ? error.message : String(error),
+        }
+      };
+    }
+  }
+
+  /**
+   * 获取可用工具
+   */
+  async getAvailableTools(): Promise<Array<{ id: string; name: string; }>> {
+    try {
+      // 返回模拟的工具列表
+      return [
+        { id: "travel-planning", name: "旅游规划工具" },
+        { id: "route-optimization", name: "路线优化工具" },
+        { id: "weather-check", name: "天气查询工具" },
+      ];
+    } catch (error) {
+      console.error("Get tools error:", error);
+      return [];
+    }
+  }
+
+  /**
+   * 获取可用工作流
+   */
+  async getAvailableWorkflows(): Promise<Array<{ id: string; name: string; }>> {
+    try {
+      // 返回模拟的工作流列表
+      return [
+        { id: "smart-travel-planning", name: "智能旅游规划" },
+        { id: "multi-city-route", name: "多城市路线规划" },
+        { id: "budget-optimization", name: "预算优化" },
+      ];
+    } catch (error) {
+      console.error("Get workflows error:", error);
+      return [];
+    }
+  }
+
+  /**
+   * 智能旅游规划 - 统一入口
+   */
+  async smartTravelPlanning(input: string | TravelRouteRequest): Promise<TravelChatResponse> {
+    try {
+      let messages: TravelAgentMessage[];
+      
+      if (typeof input === 'string') {
+        messages = [{ role: 'user', content: input }];
+      } else {
+        const prompt = this.convertRequestToPrompt(input);
+        messages = [{ role: 'user', content: prompt }];
+      }
+
+      return await this.planTravel(messages);
+    } catch (error) {
+      console.error("Smart travel planning error:", error);
+      return {
+        success: false,
+        content: "",
+        error: error instanceof Error ? error.message : "智能旅游规划失败",
+      };
+    }
+  }
+
+  /**
    * 旅游规划对话 - 参考 reviewContract 方法
    * @param messages 对话消息
    * @param temperature 温度参数（默认0.7，旅游规划需要一定创造性）
@@ -115,7 +218,7 @@ export class TravelPlanningClient {
     try {
       // 构建消息 - 参考 mastraClient.ts 的消息格式
       const formattedMessages = messages.map(msg => ({
-        role: msg.role as const,
+        role: msg.role,
         content: msg.content,
       }));
 
@@ -126,9 +229,23 @@ export class TravelPlanningClient {
         temperature,
       });
 
+      // 修复类型错误：正确访问响应内容
+      let content = "";
+      if (response && typeof response === 'object') {
+        if ('content' in response && typeof response.content === 'string') {
+          content = response.content;
+        } else if ('message' in response && typeof response.message === 'string') {
+          content = response.message;
+        } else if ('text' in response && typeof response.text === 'string') {
+          content = response.text;
+        } else {
+          content = "旅游规划完成";
+        }
+      }
+
       return {
         success: true,
-        content: response?.content || response?.message || "旅游规划完成",
+        content,
         data: response,
       };
     } catch (error) {
@@ -159,7 +276,7 @@ export class TravelPlanningClient {
     try {
       // 构建消息
       const formattedMessages = messages.map(msg => ({
-        role: msg.role as const,
+        role: msg.role,
         content: msg.content,
       }));
 
@@ -354,7 +471,7 @@ export class TravelPlanningClient {
       await agent.generate({
         messages: [
           {
-            role: "user" as const,
+            role: "user",
             content: "测试连接",
           },
         ],
@@ -375,23 +492,17 @@ export class TravelPlanningClient {
    * 获取可用的代理列表 - 参考 getAvailableAgents 方法
    * @returns 代理列表
    */
-  async getAvailableAgents(): Promise<{
-    success: boolean;
-    agents?: string[];
-    error?: string;
-  }> {
+  async getAvailableAgents(): Promise<Array<{ id: string; name: string; }>> {
     try {
       // 目前返回已知的代理ID
-      return {
-        success: true,
-        agents: [this.agentId, "contractAuditAgent", "weatherAgent"],
-      };
+      return [
+        { id: this.agentId, name: "旅游规划助手" },
+        { id: "contractAuditAgent", name: "合同审核助手" },
+        { id: "weatherAgent", name: "天气查询助手" },
+      ];
     } catch (error) {
       console.error("Get agents error:", error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "获取代理列表失败",
-      };
+      return [];
     }
   }
 
@@ -442,7 +553,7 @@ export class TravelPlanningClient {
       const response = await agent.generate({
         messages: [
           {
-            role: "user" as const,
+            role: "user",
             content: testMessage,
           },
         ],
